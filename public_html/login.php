@@ -35,6 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   session_regenerate_id(true); // prevent session fixation
   $_SESSION['user_id']  = $user['id'];
   $_SESSION['username'] = $user['username'];
+  $_SESSION['display_name'] = $user['display_name'] ?? $user['username'];
+  $_SESSION['role'] = $user['role'];
 
   $pdo->prepare('UPDATE users SET last_login = NOW() WHERE id = ?')
       ->execute([$user['id']]);

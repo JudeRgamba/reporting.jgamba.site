@@ -69,7 +69,13 @@ function route() {
     case '/overview':    renderOverview(start, end);    break;
     case '/performance': renderPerformance(start, end); break;
     case '/errors':      renderErrors(start, end);      break;
-    case '/admin':       renderAdmin();                 break;
+    case '/admin': 
+        if (window.SESSION_USER_ROLE === 'viewer') {
+            window.location.hash = '#/overview';
+            return;
+        }      
+        renderAdmin();                 
+        break;
     default:             renderOverview(start, end);
   }
 }
@@ -463,7 +469,7 @@ async function renderErrors(start, end) {
 // ─── View: Admin ──────────────────────────────────────────────────────────────
 async function renderAdmin() {
   showLoading();
-  const users = await apiFetch('/api/users');
+  const users = await apiFetch('/api/users.php');
   if (!users) return;
 
   const content = document.getElementById('content');
@@ -525,7 +531,7 @@ async function renderAdmin() {
     }
 
     try {
-      const res = await fetch('/api/users', {
+      const res = await fetch('/api/users.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -592,7 +598,7 @@ function renderUsersTable(users) {
     delBtn.textContent = 'Delete';
     delBtn.addEventListener('click', async () => {
     if (!confirm('Delete user ' + u.username + '?')) return;
-        const res = await fetch('/api/users/' + u.id + '?self=' + window.SESSION_USER_ID, {
+        const res = await fetch('/api/users.php/' + u.id + '?self=' + window.SESSION_USER_ID, {
         method: 'DELETE',
         credentials: 'include'
         });
@@ -616,6 +622,10 @@ function renderUsersTable(users) {
 // ─── Init ─────────────────────────────────────────────────────────────────────
 function init() {
   initDatePicker();
+
+  if (window.SESSION_USER_ROLE === 'viewer') {
+    document.querySelector('a[href="#/admin"]').style.display = 'none';
+  }
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
     await fetch('/logout.php', { method: 'POST', credentials: 'include' });

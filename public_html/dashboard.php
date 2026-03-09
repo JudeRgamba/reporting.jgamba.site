@@ -9,6 +9,7 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Analytics Dashboard</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -525,6 +526,7 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
 <script src="assets/js/dashboard.js"></script>
 <script>
     window.SESSION_USER_ID = <?= (int)$_SESSION['user_id'] ?>;
+    window.SESSION_USER_ROLE = <?= json_encode($_SESSION['role'] ?? 'viewer') ?>;
 </script>
 </body>
 </html>
