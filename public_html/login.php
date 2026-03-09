@@ -144,8 +144,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 <div class="login-card">
-    <h1>Analytics Dashboard</h1>
-    <p>Sign in to view your analytics data</p>
+    <h1>Hole in One Analytics</h1>
+    <p>Sign in to view your website's analytics</p>
 
     <form id="login-form">
     <div class="form-group">
