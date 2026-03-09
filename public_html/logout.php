@@ -1,5 +1,8 @@
 <?php
-session_start();
-session_destroy();
-header('Location: /login.php');
-exit;
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  session_start();
+  session_destroy();
+  echo json_encode(['success' => true]);
+} else {
+  http_response_code(405);
+}
