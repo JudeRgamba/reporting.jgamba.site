@@ -370,6 +370,15 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       font-size: 13px;
     }
 
+    .badge {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
     /* ── Slow row highlight ────────────────────────────── */
     .row-slow td:first-child { border-left: 3px solid var(--danger); }
 
@@ -507,6 +516,9 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       </a>
       <a class="nav-link" href="#/errors">
         <span class="nav-icon">◉</span> Errors
+      </a>
+      <a class="nav-link" href="#/rawdata">
+        <span class="nav-icon">◫</span> Raw Data
       </a>
     </div>
     <div class="nav-section">

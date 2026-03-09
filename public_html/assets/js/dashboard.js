@@ -76,6 +76,7 @@ function route() {
         }      
         renderAdmin();                 
         break;
+    case '/rawdata': renderRawData(); break;
     default:             renderOverview(start, end);
   }
 }
@@ -464,6 +465,100 @@ async function renderErrors(start, end) {
   });
   table.appendChild(tbody);
   tableEl.appendChild(table);
+}
+
+// ─── View: Raw Data ───────────────────────────────────────────────────────────
+async function renderRawData() {
+  showLoading();
+  const data = await apiFetch('/api/events');
+  if (!data) return;
+
+  const events = data.data || data;
+  const content = document.getElementById('content');
+
+  content.innerHTML = `
+    <div class="page-title">Raw Event Data</div>
+    <div class="panel">
+      <div class="panel-header">Last 100 Events — unprocessed from database</div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" id="raw-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Session</th>
+              <th>Type</th>
+              <th>URL</th>
+              <th>Timestamp</th>
+              <th>LCP</th>
+              <th>CLS</th>
+              <th>INP</th>
+              <th>Load (ms)</th>
+              <th>TTFB</th>
+            </tr>
+          </thead>
+          <tbody id="raw-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  const tbody = document.getElementById('raw-tbody');
+
+  if (!events || events.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text-dim)">No events found</td></tr>';
+    return;
+  }
+
+  events.forEach(e => {
+    const tr = document.createElement('tr');
+
+    const fields = [
+      e.id,
+      e.session_id ? String(e.session_id).slice(0, 12) + '…' : '—',
+      e.url ? String(e.url).replace('https://test.jgamba.site', '') || '/' : '—',
+      e.server_ts ? String(e.server_ts).slice(0, 19) : '—',
+      e.lcp ?? '—',
+      e.cls ?? '—',
+      e.inp ?? '—',
+      e.load_event ?? '—',
+      e.ttfb ?? '—'
+    ];
+
+    // Append ID and session first
+    fields.slice(0, 2).forEach(val => {
+        const td = document.createElement('td');
+        td.textContent = val;
+        tr.appendChild(td);
+    });
+
+    // ── Event type badge goes here (3rd column) ──
+    const typeTd = document.createElement('td');
+    const badge = document.createElement('span');
+    badge.className = 'badge';
+    badge.textContent = e.event_type;
+    const colors = {
+        pageview:     '#58a6ff',
+        vitals:       '#3fb950',
+        error:        '#f85149',
+        click:        '#d29922',
+        scroll_depth: '#a371f7',
+        scroll_final: '#a371f7'
+    };
+    const c = colors[e.event_type] || '#7d8590';
+    badge.style.background = c + '22';
+    badge.style.color = c;
+    typeTd.appendChild(badge);
+    tr.appendChild(typeTd);
+
+    // ── Remaining fields after event type ──
+    fields.slice(2).forEach(val => {
+        const td = document.createElement('td');
+        td.textContent = val;
+        tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
 }
 
 // ─── View: Admin ──────────────────────────────────────────────────────────────
