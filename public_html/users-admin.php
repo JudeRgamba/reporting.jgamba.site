@@ -1,5 +1,5 @@
 <?php
-require_once '../includes/admin-auth.php';
+require_once 'includes/admin-auth.php';
 
 $method  = $_SERVER['REQUEST_METHOD'];
 $nodeUrl = 'http://localhost:3006/api/users';
