@@ -469,7 +469,7 @@ async function renderErrors(start, end) {
 // ─── View: Admin ──────────────────────────────────────────────────────────────
 async function renderAdmin() {
   showLoading();
-  const users = await apiFetch('/api/users.php');
+  const users = await apiFetch('/users-admin.php');
   if (!users) return;
 
   const content = document.getElementById('content');
@@ -531,7 +531,7 @@ async function renderAdmin() {
     }
 
     try {
-      const res = await fetch('/api/users.php', {
+      const res = await fetch('/users-admin.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -546,7 +546,7 @@ async function renderAdmin() {
         document.getElementById('new-display').value  = '';
         document.getElementById('new-password').value = '';
         // Refresh table
-        const updated = await apiFetch('/api/users.php');
+        const updated = await apiFetch('/users-admin.php');
         if (updated) renderUsersTable(updated);
       } else {
         msgEl.style.color = 'var(--danger)';
@@ -598,13 +598,13 @@ function renderUsersTable(users) {
     delBtn.textContent = 'Delete';
     delBtn.addEventListener('click', async () => {
     if (!confirm('Delete user ' + u.username + '?')) return;
-        const res = await fetch('/api/users.php?id=' + u.id + '&self=' + window.SESSION_USER_ID, {
+        const res = await fetch('/users-admin.php?id=' + u.id + '&self=' + window.SESSION_USER_ID, {
             method: 'DELETE',
             credentials: 'include'
         });
       const data = await res.json();
       if (data.success) {
-        const updated = await apiFetch('/api/users.php');
+        const updated = await apiFetch('/users-admin.php');
         if (updated) renderUsersTable(updated);
       } else {
         alert(data.error || 'Could not delete user.');
