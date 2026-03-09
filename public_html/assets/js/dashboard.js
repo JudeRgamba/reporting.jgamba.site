@@ -546,7 +546,7 @@ async function renderAdmin() {
         document.getElementById('new-display').value  = '';
         document.getElementById('new-password').value = '';
         // Refresh table
-        const updated = await apiFetch('/api/users');
+        const updated = await apiFetch('/api/users.php');
         if (updated) renderUsersTable(updated);
       } else {
         msgEl.style.color = 'var(--danger)';
@@ -598,13 +598,13 @@ function renderUsersTable(users) {
     delBtn.textContent = 'Delete';
     delBtn.addEventListener('click', async () => {
     if (!confirm('Delete user ' + u.username + '?')) return;
-        const res = await fetch('/api/users.php/' + u.id + '?self=' + window.SESSION_USER_ID, {
-        method: 'DELETE',
-        credentials: 'include'
+        const res = await fetch('/api/users.php?id=' + u.id + '&self=' + window.SESSION_USER_ID, {
+            method: 'DELETE',
+            credentials: 'include'
         });
       const data = await res.json();
       if (data.success) {
-        const updated = await apiFetch('/api/users');
+        const updated = await apiFetch('/api/users.php');
         if (updated) renderUsersTable(updated);
       } else {
         alert(data.error || 'Could not delete user.');

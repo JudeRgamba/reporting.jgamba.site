@@ -1,24 +1,25 @@
 <?php
 require_once '../includes/admin-auth.php';
 
-// Forward the request to Node
 $method  = $_SERVER['REQUEST_METHOD'];
 $nodeUrl = 'http://localhost:3006/api/users';
 
-// Append path info for /api/users/:id
-if (!empty($_SERVER['PATH_INFO'])) {
-    $nodeUrl .= $_SERVER['PATH_INFO'];
+// Get user ID from query param instead of PATH_INFO
+$userId = $_GET['id'] ?? null;
+if ($userId) {
+    $nodeUrl .= '/' . intval($userId);
 }
 
-// Append query string for ?self=
-if (!empty($_SERVER['QUERY_STRING'])) {
-    $nodeUrl .= '?' . $_SERVER['QUERY_STRING'];
+// Append self param for delete
+$self = $_GET['self'] ?? null;
+if ($self) {
+    $nodeUrl .= '?self=' . intval($self);
 }
 
 $opts = [
     'http' => [
         'method'  => $method,
-        'header'  => 'Content-Type: application/json',
+        'header'  => "Content-Type: application/json\r\n",
         'content' => file_get_contents('php://input'),
         'ignore_errors' => true
     ]
