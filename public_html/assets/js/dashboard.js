@@ -74,103 +74,106 @@ function route() {
   }
 }
 
-// ─── Canvas Line Chart ────────────────────────────────────────────────────────
+// ─── Charts.js Line Chart ───────────────────────────────────────────────────────
+// Store chart instances so we can destroy them before redrawing
+const chartInstances = {};
+
 function drawLineChart(canvasId, data, xKey, yKey, color) {
+  // Destroy existing chart on this canvas if it exists
+  if (chartInstances[canvasId]) {
+    chartInstances[canvasId].destroy();
+    delete chartInstances[canvasId];
+  }
+
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width = canvas.offsetWidth;
-  const H = canvas.height = 260;
-  const pad = { top: 20, right: 20, bottom: 40, left: 50 };
 
-  ctx.clearRect(0, 0, W, H);
+  const labels = data.map(d => String(d[xKey]).slice(5)); // trim year from date
+  const values = data.map(d => Number(d[yKey]));
 
-  if (!data || data.length === 0) {
-    ctx.fillStyle = '#484f58';
-    ctx.font = '12px JetBrains Mono, monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('No data for selected range', W / 2, H / 2);
-    return;
+  chartInstances[canvasId] = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        borderColor: color,
+        backgroundColor: color + '22',
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: color,
+        fill: true,
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: '#7d8590',
+            font: { family: 'JetBrains Mono', size: 10 }
+          },
+          grid: { color: '#21262d' }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: '#7d8590',
+            font: { family: 'JetBrains Mono', size: 10 }
+          },
+          grid: { color: '#21262d' }
+        }
+      }
+    }
+  });
+}
+
+function drawBarChart(canvasId, labels, values, colors) {
+  if (chartInstances[canvasId]) {
+    chartInstances[canvasId].destroy();
+    delete chartInstances[canvasId];
   }
 
-  const values  = data.map(d => Number(d[yKey]));
-  const maxVal  = Math.max(...values, 1);
-  const plotW   = W - pad.left - pad.right;
-  const plotH   = H - pad.top - pad.bottom;
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
 
-  // Grid lines
-  ctx.strokeStyle = '#21262d';
-  ctx.lineWidth = 1;
-  for (let i = 0; i <= 4; i++) {
-    const y = pad.top + (i / 4) * plotH;
-    ctx.beginPath();
-    ctx.moveTo(pad.left, y);
-    ctx.lineTo(W - pad.right, y);
-    ctx.stroke();
-    // Y labels
-    ctx.fillStyle = '#7d8590';
-    ctx.font = '10px JetBrains Mono, monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText(Math.round(maxVal * (1 - i / 4)), pad.left - 6, y + 4);
-  }
-
-  // Axes
-  ctx.strokeStyle = '#30363d';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(pad.left, pad.top);
-  ctx.lineTo(pad.left, H - pad.bottom);
-  ctx.lineTo(W - pad.right, H - pad.bottom);
-  ctx.stroke();
-
-  // Fill under line
-  const gradient = ctx.createLinearGradient(0, pad.top, 0, H - pad.bottom);
-  gradient.addColorStop(0, color + '33');
-  gradient.addColorStop(1, color + '00');
-
-  ctx.beginPath();
-  data.forEach((d, i) => {
-    const x = pad.left + (i / Math.max(data.length - 1, 1)) * plotW;
-    const y = pad.top + plotH - (Number(d[yKey]) / maxVal) * plotH;
-    if (i === 0) ctx.moveTo(x, H - pad.bottom);
-    ctx.lineTo(x, y);
-  });
-  ctx.lineTo(pad.left + plotW, H - pad.bottom);
-  ctx.closePath();
-  ctx.fillStyle = gradient;
-  ctx.fill();
-
-  // Line
-  ctx.beginPath();
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  ctx.lineJoin = 'round';
-  data.forEach((d, i) => {
-    const x = pad.left + (i / Math.max(data.length - 1, 1)) * plotW;
-    const y = pad.top + plotH - (Number(d[yKey]) / maxVal) * plotH;
-    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-
-  // Dots
-  ctx.fillStyle = color;
-  data.forEach((d, i) => {
-    const x = pad.left + (i / Math.max(data.length - 1, 1)) * plotW;
-    const y = pad.top + plotH - (Number(d[yKey]) / maxVal) * plotH;
-    ctx.beginPath();
-    ctx.arc(x, y, 3, 0, Math.PI * 2);
-    ctx.fill();
-  });
-
-  // X labels (first, middle, last)
-  ctx.fillStyle = '#7d8590';
-  ctx.font = '10px JetBrains Mono, monospace';
-  const labelIdxs = [0, Math.floor(data.length / 2), data.length - 1];
-  labelIdxs.forEach(i => {
-    if (data[i]) {
-      const x = pad.left + (i / Math.max(data.length - 1, 1)) * plotW;
-      ctx.textAlign = i === 0 ? 'left' : i === data.length - 1 ? 'right' : 'center';
-      ctx.fillText(String(data[i][xKey]).slice(5), x, H - pad.bottom + 16);
+  chartInstances[canvasId] = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: colors,
+        borderRadius: 4,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: '#7d8590',
+            font: { family: 'JetBrains Mono', size: 11 }
+          },
+          grid: { color: '#21262d' }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: '#7d8590',
+            font: { family: 'JetBrains Mono', size: 10 }
+          },
+          grid: { color: '#21262d' }
+        }
+      }
     }
   });
 }
@@ -208,7 +211,7 @@ async function renderOverview(start, end) {
     <div class="panel">
       <div class="panel-header">Pageviews Over Time</div>
       <div class="panel-body">
-        <canvas id="pv-chart" style="width:100%;display:block;"></canvas>
+        <canvas id="pv-chart"></canvas>
       </div>
     </div>
     <div class="panel">
@@ -292,6 +295,12 @@ async function renderPerformance(start, end) {
     <div class="page-title">Performance</div>
     <div class="vitals-grid" id="vitals"></div>
     <div class="panel">
+        <div class="panel-header">Web Vitals Comparison</div>
+        <div class="panel-body">
+            <canvas id="vitals-chart"></canvas>
+        </div>
+    </div>
+    <div class="panel">
       <div class="panel-header">Per-Page Breakdown</div>
       <div id="perf-table"></div>
     </div>
@@ -316,6 +325,13 @@ async function renderPerformance(start, end) {
     `;
     vitalsEl.appendChild(card);
   });
+
+  drawBarChart(
+  'vitals-chart',
+  ['LCP (ms)', 'INP (ms)', 'CLS ×1000'],
+  [Math.round(avgLcp), Math.round(avgInp), Math.round(avgCls * 1000)],
+  [vitalColor('lcp', avgLcp), vitalColor('inp', avgInp), vitalColor('cls', avgCls)]
+    );
 
   // Per-page table
   const tableEl = document.getElementById('perf-table');
@@ -382,7 +398,7 @@ async function renderErrors(start, end) {
     <div class="panel">
       <div class="panel-header">Error Trend</div>
       <div class="panel-body">
-        <canvas id="err-chart" style="width:100%;display:block;"></canvas>
+        <canvas id="err-chart"></canvas>
       </div>
     </div>
     <div class="panel">
@@ -575,11 +591,11 @@ function renderUsersTable(users) {
     delBtn.className = 'btn btn-danger';
     delBtn.textContent = 'Delete';
     delBtn.addEventListener('click', async () => {
-      if (!confirm('Delete user ' + u.username + '?')) return;
-      const res = await fetch('/api/users/' + u.id + '?self=' + u.id, {
+    if (!confirm('Delete user ' + u.username + '?')) return;
+        const res = await fetch('/api/users/' + u.id + '?self=' + window.SESSION_USER_ID, {
         method: 'DELETE',
         credentials: 'include'
-      });
+        });
       const data = await res.json();
       if (data.success) {
         const updated = await apiFetch('/api/users');
