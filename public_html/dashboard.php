@@ -749,6 +749,10 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       .page-title {
         font-size: 18px;
       }
+
+      .chart-row {
+        grid-template-columns: 1fr !important;
+      }
     }
 
     /* ── Responsive: Mobile (iPhone 15 Pro = 393px) ────── */
@@ -920,6 +924,12 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
           </a>
         <?php endif; ?>
 
+        <?php if (in_array('behavior', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
+          <a class="nav-link" href="#/behavior">
+            <span class="nav-icon">👁</span> Behavior
+          </a>
+        <?php endif; ?>
+
         <?php if (in_array('performance', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
           <a class="nav-link" href="#/performance">
             <span class="nav-icon">◎</span> Performance
@@ -1042,6 +1052,7 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
   <script src="assets/js/dashboard.js"></script>
   <script src="assets/js/report-builder.js"></script>
   <script src="assets/js/report-briefing.js"></script>
+  <script src="assets/js/behavior.js"></script>
 </body>
 
 </html>

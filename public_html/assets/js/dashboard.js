@@ -96,6 +96,14 @@ function route() {
             const { start: s1, end: e1 } = getDateRange();
             renderOverview(s1, e1);
             break;
+        case '/behavior':
+            if (!canAccess('behavior')) {
+                showError('You are not assigned to the Behavior section.');
+                return;
+            }
+            const { start: s4, end: e4 } = getDateRange();
+            renderBehavior(s4, e4);
+            break;
         case '/performance':
             if (!canAccess('performance')) {
                 showError('You are not assigned to the Performance section.');
