@@ -1022,13 +1022,13 @@ async function renderErrors(start, end) {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;" class="chart-row">
             <div class="panel">
                 ${panelHeader('Errors by Type', byType, 'errors-by-type.csv')}
-                <div class="panel-body" style="position:relative;min-height:200px;">
+                <div class="panel-body" style="position:relative;height:120px;">
                     <canvas id="type-chart"></canvas>
                 </div>
             </div>
             <div class="panel">
                 ${panelHeader('Errors by Element', byElement, 'errors-by-element.csv')}
-                <div class="panel-body" style="position:relative;min-height:200px;">
+                <div class="panel-body" style="position:relative;height:120px;">
                     <canvas id="element-chart"></canvas>
                 </div>
             </div>
@@ -1037,7 +1037,7 @@ async function renderErrors(start, end) {
         <!-- Errors by Page -->
         <div class="panel" style="margin-bottom:20px;">
             ${panelHeader('Errors by Page', byPage, 'errors-by-page.csv')}
-            <div class="panel-body" style="position:relative;min-height:200px;">
+            <div class="panel-body" style="position:relative;height:200px;">
                 <canvas id="page-chart"></canvas>
             </div>
         </div>
@@ -1139,6 +1139,9 @@ async function renderErrors(start, end) {
                     ),
                     borderWidth: 1,
                     borderRadius: 4,
+                    maxBarThickness: 40,        
+                    categoryPercentage: 0.5,    
+                    barPercentage: 0.8,
                 }],
             },
             options: {
@@ -1174,6 +1177,9 @@ async function renderErrors(start, end) {
                     borderColor: '#58a6ff',
                     borderWidth: 1,
                     borderRadius: 4,
+                    maxBarThickness: 40,        
+                    categoryPercentage: 0.5,    
+                    barPercentage: 0.8, 
                 }],
             },
             options: {
@@ -1213,6 +1219,9 @@ async function renderErrors(start, end) {
                     borderColor: '#f85149',
                     borderWidth: 1,
                     borderRadius: 4,
+                    maxBarThickness: 40,        
+                    categoryPercentage: 0.5,    
+                    barPercentage: 0.8, 
                 }],
             },
             options: {
