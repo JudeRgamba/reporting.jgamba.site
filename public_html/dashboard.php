@@ -673,25 +673,25 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
 
       .sidebar {
         display: block;
-        /* ← always in DOM, never display:none */
         position: fixed;
         top: var(--header-h);
         left: 0;
         width: 240px;
         height: calc(100vh - var(--header-h));
-        /* ← full remaining height */
         z-index: 200;
-        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
-        background: rgba(13, 17, 23, 0.92);
-        /* ← translucent */
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.6);
+
+        /* Translucent with blur */
+        background: rgba(13, 17, 23, 0.88);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+
+        /* Border radius on right edges only */
+        border-radius: 0 10px 10px 0;
+        border-right: 1px solid rgba(33, 38, 45, 0.6);
 
         /* Slide animation */
         transform: translateX(-100%);
-        transition: transform 0.25s ease;
-
-        /* Remove display:none toggle — use transform instead */
         visibility: hidden;
         transition: transform 0.25s ease, visibility 0s linear 0.25s;
       }
@@ -798,15 +798,16 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       }
 
       .header {
-        flex-wrap: wrap;
-        padding: 8px 12px;
-        gap: 6px;
-        height: auto;
-        min-height: var(--header-h);
+        flex-wrap: nowrap;
+        padding: 0px 12px;
+        gap: 8px;
+        height: var(--header-h);
+        overflow: hidden;
       }
 
       .header-logo {
         font-size: 12px;
+        flex-shrink: 0;
       }
 
       .header-divider {
@@ -827,14 +828,19 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
 
       .date-range input[type="date"] {
         flex: 1;
-        font-size: 11px;
+        font-size: 10px;
         padding: 3px 4px;
+        min-width: 0;
       }
 
       .date-range {
-        width: 100%;
-        order: 3;
-        justify-content: space-between;
+        flex: 1;
+        gap: 4px;
+        min-width: 0;
+      }
+
+      .date-range label {
+        display: none;
       }
 
       .form-grid {
