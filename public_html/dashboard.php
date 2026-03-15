@@ -658,7 +658,7 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
     </header>
 
     <!-- Sidebar -->
-    <nav>
+    <nav class="sidebar">
       <?php if ($_SESSION['role'] !== 'viewer'): ?>
 
         <?php if (in_array('overview', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
