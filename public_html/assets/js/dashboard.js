@@ -11,6 +11,7 @@ async function apiFetch(url) {
             'X-User-Role': window.SESSION_ROLE || 'viewer',
             'X-User-Sections': JSON.stringify(window.SESSION_SECTIONS || []),
             'X-User-Id': String(window.SESSION_USER_ID || ''),
+            'X-User-Name': window.SESSION_NAME || '',
         },
     });
     if (res.status === 401) {
@@ -34,6 +35,7 @@ async function apiRequest(url, method, body = null) {
             'X-User-Role':     window.SESSION_ROLE     || 'viewer',
             'X-User-Sections': JSON.stringify(window.SESSION_SECTIONS || []),
             'X-User-Id':       String(window.SESSION_USER_ID || ''),
+            'X-User-Name': window.SESSION_NAME || '',
         },
     };
     if (body) opts.body = JSON.stringify(body);
@@ -314,81 +316,252 @@ function showError(msg) {
 // View: Overview
 async function renderOverview(start, end) {
     showLoading();
-    const [summary, pv] = await Promise.all([
-        apiFetch('/api/dashboard?start=' + start + '&end=' + end),
-        apiFetch('/api/pageviews?start=' + start + '&end=' + end),
+
+    const [summary, pv, sessionOverTime] = await Promise.all([
+        apiFetch(`/api/dashboard?start=${start}&end=${end}`),
+        apiFetch(`/api/pageviews?start=${start}&end=${end}`),
+        apiFetch(`/api/sessions-over-time?start=${start}&end=${end}`),
     ]);
 
-    if (!summary || !pv) return;
+    if (!summary) return;
 
-    const s = summary.data;
-    const byDay = pv.data.byDay || [];
-    const topPages = pv.data.topPages || [];
+    const s        = summary.data;
+    const byDay    = pv?.data?.byDay    || [];
+    const topPages = pv?.data?.topPages || [];
+    const sotData  = sessionOverTime?.data || [];
+
+    // Event type breakdown from raw events
+    const eventsRes = await apiFetch('/api/events');
+    const rawEvents = eventsRes?.data || [];
+    const eventTypeCounts = rawEvents.reduce((acc, e) => {
+        acc[e.event_type] = (acc[e.event_type] || 0) + 1;
+        return acc;
+    }, {});
+    const eventTypeData = Object.entries(eventTypeCounts)
+        .map(([type, count]) => ({ type, count }))
+        .sort((a, b) => b.count - a.count);
+
+    // Comments panel
+    const commentsHTML = await renderCommentsPanel('overview', start, end);
 
     const content = document.getElementById('content');
     content.innerHTML = `
-    <div class="page-title">Overview</div>
-    <div class="cards-grid" id="cards"></div>
-    <div class="panel">
-        ${panelHeader('Pageviews Over Time', byDay, 'pageviews-over-time.csv')}
-        <div class="panel-body"><canvas id="pv-chart"></canvas></div>
-    </div>
-    <div class="panel">
-        ${panelHeader('Top Pages', topPages, 'top-pages.csv')}
-        <div id="top-pages"></div>
-    </div>
+        <div class="page-title">Overview</div>
+
+        <!-- Summary Cards -->
+        <div class="cards-grid" id="cards"></div>
+
+        <!-- Pageviews + Sessions dual line -->
+        <div class="panel">
+            ${panelHeader('Pageviews & Sessions Over Time', sotData, 'pageviews-sessions.csv')}
+            <div class="panel-body" style="position:relative;min-height:220px;">
+                <canvas id="pv-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Top Pages + Event Types side by side -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;" class="chart-row">
+            <div class="panel">
+                ${panelHeader('Top Pages', topPages, 'top-pages.csv')}
+                <div class="panel-body" style="position:relative;min-height:220px;">
+                    <canvas id="top-pages-chart"></canvas>
+                </div>
+            </div>
+            <div class="panel">
+                ${panelHeader('Event Type Breakdown', eventTypeData, 'event-types.csv')}
+                <div class="panel-body" style="position:relative;min-height:220px;">
+                    <canvas id="event-types-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Pages Table -->
+        <div class="panel">
+            ${panelHeader('Top Pages Detail', topPages, 'top-pages-detail.csv')}
+            <div id="top-pages-table"></div>
+        </div>
+
+        <!-- Comments -->
+        ${commentsHTML}
     `;
 
-    // Cards
+    // -- Summary Cards --
     const cards = [
-        { label: 'Pageviews', value: Number(s.total_pageviews || 0).toLocaleString() },
-        { label: 'Sessions', value: Number(s.total_sessions || 0).toLocaleString() },
-        { label: 'Avg Load', value: Math.round(s.avg_load_time_ms || 0) + ' ms' },
-        { label: 'JS Errors', value: Number(s.total_errors || 0).toLocaleString() },
+        { label: 'Pageviews',    value: Number(s.total_pageviews  || 0).toLocaleString() },
+        { label: 'Sessions',     value: Number(s.total_sessions   || 0).toLocaleString() },
+        { label: 'Avg Load',     value: Math.round(s.avg_load_time_ms || 0) + ' ms'      },
+        { label: 'JS Errors',    value: Number(s.total_errors     || 0).toLocaleString() },
     ];
     const cardsEl = document.getElementById('cards');
-    cards.forEach((c) => {
+    cards.forEach(c => {
         const card = document.createElement('div');
         card.className = 'metric-card';
-        const label = document.createElement('div');
-        label.className = 'metric-label';
-        label.textContent = c.label;
-        const val = document.createElement('div');
-        val.className = 'metric-value';
-        val.textContent = c.value;
-        card.appendChild(label);
-        card.appendChild(val);
+        card.innerHTML = `
+            <div class="metric-label">${c.label}</div>
+            <div class="metric-value">${c.value}</div>
+        `;
         cardsEl.appendChild(card);
     });
 
-    // Chart
-    drawLineChart('pv-chart', byDay, 'day', 'views', '#58a6ff');
-
-    // Top pages table
-    const topEl = document.getElementById('top-pages');
-    if (topPages.length === 0) {
-        topEl.innerHTML = '<div class="empty-state">No pageview data yet</div>';
-        return;
+    // -- Dual Line Chart: Pageviews + Sessions --
+    if (chartInstances['pv-chart']) {
+        chartInstances['pv-chart'].destroy();
+        delete chartInstances['pv-chart'];
     }
-    const table = document.createElement('table');
-    table.className = 'data-table';
-    table.innerHTML = '<thead><tr><th>URL</th><th>Views</th></tr></thead>';
-    const tbody = document.createElement('tbody');
-    topPages.forEach((p) => {
-        const tr = document.createElement('tr');
-        const tdUrl = document.createElement('td');
-        tdUrl.textContent = p.url;
-        const tdViews = document.createElement('td');
-        tdViews.textContent = Number(p.views).toLocaleString();
-        tr.appendChild(tdUrl);
-        tr.appendChild(tdViews);
-        tbody.appendChild(tr);
-    });
-    table.appendChild(tbody);
-    const wrap = document.createElement('div');
-    wrap.className = 'table-wrap';
-    wrap.appendChild(table);
-    topEl.appendChild(wrap);
+    const pvCanvas = document.getElementById('pv-chart');
+    if (pvCanvas && sotData.length > 0) {
+        const labels = sotData.map(d => String(d.day).slice(0, 10).slice(5));
+        chartInstances['pv-chart'] = new Chart(pvCanvas, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Pageviews',
+                        data: sotData.map(d => Number(d.pageviews)),
+                        borderColor: '#58a6ff',
+                        backgroundColor: '#58a6ff22',
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        fill: true,
+                        tension: 0.3,
+                    },
+                    {
+                        label: 'Sessions',
+                        data: sotData.map(d => Number(d.sessions)),
+                        borderColor: '#3fb950',
+                        backgroundColor: '#3fb95022',
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        fill: true,
+                        tension: 0.3,
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        labels: { color: '#7d8590', font: { size: 11 } }
+                    },
+                },
+                scales: {
+                    x: { ticks: { color: '#7d8590', font: { size: 10 } }, grid: { color: '#21262d' } },
+                    y: { beginAtZero: true, ticks: { color: '#7d8590' }, grid: { color: '#21262d' } },
+                },
+            },
+        });
+    } else if (pvCanvas && byDay.length > 0) {
+        // Fallback to single line if sessions-over-time endpoint not available
+        drawLineChart('pv-chart', byDay, 'day', 'views', '#58a6ff');
+    }
+
+    // -- Top Pages Horizontal Bar --
+    if (chartInstances['top-pages-chart']) {
+        chartInstances['top-pages-chart'].destroy();
+        delete chartInstances['top-pages-chart'];
+    }
+    const tpCanvas = document.getElementById('top-pages-chart');
+    if (tpCanvas && topPages.length > 0) {
+        const tpLabels = topPages.slice(0, 8).map(p =>
+            p.url.replace('https://test.jgamba.site', '') || '/'
+        );
+        chartInstances['top-pages-chart'] = new Chart(tpCanvas, {
+            type: 'bar',
+            data: {
+                labels: tpLabels,
+                datasets: [{
+                    data: topPages.slice(0, 8).map(p => Number(p.views)),
+                    backgroundColor: '#58a6ff44',
+                    borderColor: '#58a6ff',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }],
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { beginAtZero: true, ticks: { color: '#7d8590' }, grid: { color: '#21262d' } },
+                    y: { ticks: { color: '#7d8590', font: { size: 10 } }, grid: { display: false } },
+                },
+            },
+        });
+    }
+
+    // -- Event Type Breakdown Horizontal Bar 
+    if (chartInstances['event-types-chart']) {
+        chartInstances['event-types-chart'].destroy();
+        delete chartInstances['event-types-chart'];
+    }
+    const etCanvas = document.getElementById('event-types-chart');
+    if (etCanvas && eventTypeData.length > 0) {
+        const etColors = {
+            pageview:     '#58a6ff',
+            vitals:       '#3fb950',
+            error:        '#f85149',
+            click:        '#d29922',
+            scroll_depth: '#a371f7',
+            scroll_final: '#a371f7',
+        };
+        chartInstances['event-types-chart'] = new Chart(etCanvas, {
+            type: 'bar',
+            data: {
+                labels: eventTypeData.map(e => e.type),
+                datasets: [{
+                    data: eventTypeData.map(e => e.count),
+                    backgroundColor: eventTypeData.map(e =>
+                        (etColors[e.type] || '#7d8590') + '44'
+                    ),
+                    borderColor: eventTypeData.map(e =>
+                        etColors[e.type] || '#7d8590'
+                    ),
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }],
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { beginAtZero: true, ticks: { color: '#7d8590' }, grid: { color: '#21262d' } },
+                    y: { ticks: { color: '#7d8590', font: { size: 10 } }, grid: { display: false } },
+                },
+            },
+        });
+    }
+
+    // -- Top Pages Table 
+    const tableEl = document.getElementById('top-pages-table');
+    if (!topPages || topPages.length === 0) {
+        tableEl.innerHTML = '<div class="empty-state">No pageview data yet</div>';
+    } else {
+        const wrap  = document.createElement('div');
+        wrap.className = 'table-wrap';
+        const table = document.createElement('table');
+        table.className = 'data-table';
+        table.innerHTML = '<thead><tr><th>URL</th><th>Views</th></tr></thead>';
+        const tbody = document.createElement('tbody');
+        topPages.forEach(p => {
+            const tr    = document.createElement('tr');
+            const tdUrl = document.createElement('td');
+            tdUrl.textContent = p.url;
+            const tdViews = document.createElement('td');
+            tdViews.textContent = Number(p.views).toLocaleString();
+            tr.appendChild(tdUrl);
+            tr.appendChild(tdViews);
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        wrap.appendChild(table);
+        tableEl.appendChild(wrap);
+    }
 }
 
 // View: Performance
@@ -859,6 +1032,262 @@ function downloadCSV(filename, data) {
     URL.revokeObjectURL(url);
 }
 
+// Comments Panel
+async function renderCommentsPanel(section, start, end) {
+    // Only show for analysts and super_admin
+    if (!['super_admin', 'analyst'].includes(window.SESSION_ROLE)) return '';
+
+    const data = await apiFetch(
+        `/api/comments?section=${section}&start=${start}&end=${end}`
+    );
+    const comments = data?.data || [];
+
+    const canDelete = (commentUserId) =>
+        window.SESSION_ROLE === 'super_admin' ||
+        String(commentUserId) === String(window.SESSION_USER_ID);
+
+    return `
+        <div class="panel" id="comments-panel-${section}" style="margin-bottom:20px;">
+            <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;">
+                <span>Analyst Notes</span>
+                <span style="font-size:10px;color:var(--text-dim);">
+                    ${start} → ${end}
+                </span>
+            </div>
+            <div id="comments-list-${section}" style="padding:0;">
+                ${comments.length === 0 ? `
+                    <div style="
+                        padding:20px 20px;
+                        color:var(--text-dim);
+                        font-family:var(--font-mono);
+                        font-size:12px;
+                    ">No notes yet for this date range.</div>
+                ` : comments.map(c => `
+                    <div class="comment-item" data-id="${c.id}" style="
+                        padding:16px 20px;
+                        border-bottom:1px solid var(--border);
+                        display:flex;
+                        gap:12px;
+                        align-items:flex-start;
+                    ">
+                        <div style="
+                            width:32px;height:32px;
+                            border-radius:50%;
+                            background:var(--accent)22;
+                            border:1px solid var(--accent)44;
+                            display:flex;align-items:center;justify-content:center;
+                            font-size:13px;font-weight:700;color:var(--accent);
+                            flex-shrink:0;
+                        ">${escapeHtml((c.display_name || '?')[0].toUpperCase())}</div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="
+                                display:flex;align-items:center;
+                                gap:8px;margin-bottom:4px;
+                            ">
+                                <span style="font-weight:600;font-size:13px;">
+                                    ${escapeHtml(c.display_name || 'Unknown')}
+                                </span>
+                                <span style="
+                                    font-family:var(--font-mono);
+                                    font-size:11px;color:var(--text-dim);
+                                ">
+                                    ${new Date(c.created_at).toLocaleDateString('en-US', {
+                                        month: 'short', day: 'numeric', year: 'numeric',
+                                        hour: '2-digit', minute: '2-digit'
+                                    })}
+                                </span>
+                            </div>
+                            <div style="
+                                font-size:13px;line-height:1.6;
+                                color:var(--text);white-space:pre-wrap;
+                            ">${escapeHtml(c.body)}</div>
+                        </div>
+                        ${canDelete(c.user_id) ? `
+                        <button class="comment-delete-btn"
+                            data-id="${c.id}"
+                            data-section="${section}"
+                            data-start="${start}"
+                            data-end="${end}"
+                            style="
+                                background:none;border:none;
+                                color:var(--text-dim);font-size:14px;
+                                cursor:pointer;padding:4px;
+                                flex-shrink:0;
+                                transition:color 0.15s;
+                            "
+                            onmouseover="this.style.color='var(--danger)'"
+                            onmouseout="this.style.color='var(--text-dim)'"
+                        >✕</button>` : ''}
+                    </div>
+                `).join('')}
+            </div>
+
+            <!-- Add comment form -->
+            <div style="padding:16px 20px;border-top:1px solid var(--border);">
+                <textarea
+                    id="comment-input-${section}"
+                    placeholder="Add a note about this data..."
+                    rows="2"
+                    style="
+                        width:100%;padding:10px 12px;
+                        background:var(--bg);
+                        border:1px solid var(--border2);
+                        border-radius:var(--radius);
+                        color:var(--text);
+                        font-family:var(--font-sans);
+                        font-size:13px;
+                        outline:none;
+                        resize:vertical;
+                        transition:border-color 0.15s;
+                    "
+                    onfocus="this.style.borderColor='var(--accent)'"
+                    onblur="this.style.borderColor='var(--border2)'"
+                ></textarea>
+                <div style="
+                    display:flex;justify-content:flex-end;
+                    margin-top:8px;gap:8px;align-items:center;
+                ">
+                    <span id="comment-msg-${section}"
+                        style="font-size:12px;font-family:var(--font-mono);flex:1;">
+                    </span>
+                    <button class="btn-primary comment-post-btn"
+                        data-section="${section}"
+                        data-start="${start}"
+                        data-end="${end}"
+                        style="font-size:12px;padding:6px 16px;"
+                    >Post Note</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Comment event delegation — add once in init()
+function initCommentListeners() {
+    document.addEventListener('click', async (e) => {
+        // Post comment
+        if (e.target.classList.contains('comment-post-btn')) {
+            const section = e.target.dataset.section;
+            const start   = e.target.dataset.start;
+            const end     = e.target.dataset.end;
+            const input   = document.getElementById(`comment-input-${section}`);
+            const msgEl   = document.getElementById(`comment-msg-${section}`);
+            const body    = input?.value?.trim();
+
+            if (!body) {
+                msgEl.style.color = 'var(--danger)';
+                msgEl.textContent = 'Note cannot be empty.';
+                return;
+            }
+
+            msgEl.style.color = 'var(--text-dim)';
+            msgEl.textContent = 'Posting...';
+
+            const data = await apiRequest('/api/comments', 'POST', {
+                section, date_start: start, date_end: end, body
+            });
+
+            if (data?.success) {
+                input.value = '';
+                msgEl.textContent = '';
+                // Re-render just the comments list
+                await refreshComments(section, start, end);
+            } else {
+                msgEl.style.color = 'var(--danger)';
+                msgEl.textContent = data?.error || 'Failed to post.';
+            }
+        }
+
+        // Delete comment
+        if (e.target.classList.contains('comment-delete-btn')) {
+            const id      = e.target.dataset.id;
+            const section = e.target.dataset.section;
+            const start   = e.target.dataset.start;
+            const end     = e.target.dataset.end;
+
+            if (!confirm('Delete this note?')) return;
+
+            const data = await apiRequest(`/api/comments/${id}`, 'DELETE');
+            if (data?.success) {
+                await refreshComments(section, start, end);
+            } else {
+                alert(data?.error || 'Failed to delete.');
+            }
+        }
+    });
+}
+
+async function refreshComments(section, start, end) {
+    const data     = await apiFetch(
+        `/api/comments?section=${section}&start=${start}&end=${end}`
+    );
+    const comments = data?.data || [];
+    const listEl   = document.getElementById(`comments-list-${section}`);
+    if (!listEl) return;
+
+    const canDelete = (commentUserId) =>
+        window.SESSION_ROLE === 'super_admin' ||
+        String(commentUserId) === String(window.SESSION_USER_ID);
+
+    if (comments.length === 0) {
+        listEl.innerHTML = `
+            <div style="
+                padding:20px;color:var(--text-dim);
+                font-family:var(--font-mono);font-size:12px;
+            ">No notes yet for this date range.</div>
+        `;
+        return;
+    }
+
+    listEl.innerHTML = comments.map(c => `
+        <div class="comment-item" data-id="${c.id}" style="
+            padding:16px 20px;
+            border-bottom:1px solid var(--border);
+            display:flex;gap:12px;align-items:flex-start;
+        ">
+            <div style="
+                width:32px;height:32px;border-radius:50%;
+                background:var(--accent)22;border:1px solid var(--accent)44;
+                display:flex;align-items:center;justify-content:center;
+                font-size:13px;font-weight:700;color:var(--accent);flex-shrink:0;
+            ">${escapeHtml((c.display_name || '?')[0].toUpperCase())}</div>
+            <div style="flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                    <span style="font-weight:600;font-size:13px;">
+                        ${escapeHtml(c.display_name || 'Unknown')}
+                    </span>
+                    <span style="
+                        font-family:var(--font-mono);font-size:11px;color:var(--text-dim);
+                    ">
+                        ${new Date(c.created_at).toLocaleDateString('en-US', {
+                            month: 'short', day: 'numeric', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                        })}
+                    </span>
+                </div>
+                <div style="
+                    font-size:13px;line-height:1.6;
+                    color:var(--text);white-space:pre-wrap;
+                ">${escapeHtml(c.body)}</div>
+            </div>
+            ${canDelete(c.user_id) ? `
+            <button class="comment-delete-btn"
+                data-id="${c.id}"
+                data-section="${section}"
+                data-start="${start}"
+                data-end="${end}"
+                style="
+                    background:none;border:none;color:var(--text-dim);
+                    font-size:14px;cursor:pointer;padding:4px;flex-shrink:0;
+                    transition:color 0.15s;
+                "
+                onmouseover="this.style.color='var(--danger)'"
+                onmouseout="this.style.color='var(--text-dim)'"
+            >✕</button>` : ''}
+        </div>
+    `).join('');
+}
+
 // Panel header with optional CSV download button
 function panelHeader(title, data, filename) {
     const id = 'dl-' + filename.replace(/[^a-z0-9]/gi, '-');
@@ -1166,6 +1595,9 @@ function init() {
             if (cache) downloadCSV(cache.filename, cache.data);
         }
     });
+
+    // Comments delegated listener
+    initCommentListeners();
 
     window.addEventListener('hashchange', route);
 
