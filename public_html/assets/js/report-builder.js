@@ -13,9 +13,30 @@ async function openReportBuilder(existingReport) {
         : null;
 
     // Fetch all available data upfront
-    showLoading();
     const sections = window.SESSION_SECTIONS || [];
     const canSee = (s) => window.SESSION_ROLE === 'super_admin' || sections.includes(s);
+
+    const loadingModal = document.createElement('div');
+    loadingModal.style.cssText = `
+        position:fixed;inset:0;background:rgba(0,0,0,0.7);
+        display:flex;align-items:center;justify-content:center;
+        z-index:1000;
+    `;
+    loadingModal.innerHTML = `
+        <div style="
+            background:var(--surface);
+            border:1px solid var(--border);
+            border-radius:12px;
+            padding:40px 60px;
+            text-align:center;
+            color:var(--text-dim);
+            font-size:14px;
+        ">
+            <div style="font-size:24px;margin-bottom:12px;">⏳</div>
+            Loading report data...
+        </div>
+    `;
+    document.body.appendChild(loadingModal);
 
     const [overviewData, pvData, perfData, errData, viewerData] = await Promise.all([
         canSee('overview')     ? apiFetch(`/api/dashboard?start=${start}&end=${end}`)   : null,
@@ -32,6 +53,8 @@ async function openReportBuilder(existingReport) {
         },
         }).then(r => r.ok ? r.json() : null).catch(() => null),
     ]);
+
+    loadingModal.remove();
 
     const ov   = overviewData?.data  || {};
     const pv   = pvData?.data        || {};
