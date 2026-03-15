@@ -1,13 +1,12 @@
 <?php
 require_once 'includes/auth.php';
 
-echo '<pre>' . print_r($_SESSION, true) . '</pre>'; exit;
-
 $username     = htmlspecialchars($_SESSION['username']);
 $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['username']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,29 +17,43 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     /* ── Reset & Variables ─────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg:         #080c10;
-      --surface:    #0d1117;
-      --surface2:   #161b22;
-      --border:     #21262d;
-      --border2:    #30363d;
-      --text:       #e6edf3;
-      --text-muted: #7d8590;
-      --text-dim:   #484f58;
-      --accent:     #58a6ff;
-      --accent2:    #3fb950;
-      --warn:       #d29922;
-      --danger:     #f85149;
-      --sidebar-w:  220px;
-      --header-h:   56px;
-      --radius:     6px;
-      --font-mono:  'JetBrains Mono', monospace;
-      --font-sans:  'Syne', sans-serif;
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
-    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-sans); font-size: 14px; line-height: 1.5; }
+    :root {
+      --bg: #080c10;
+      --surface: #0d1117;
+      --surface2: #161b22;
+      --border: #21262d;
+      --border2: #30363d;
+      --text: #e6edf3;
+      --text-muted: #7d8590;
+      --text-dim: #484f58;
+      --accent: #58a6ff;
+      --accent2: #3fb950;
+      --warn: #d29922;
+      --danger: #f85149;
+      --sidebar-w: 220px;
+      --header-h: 56px;
+      --radius: 6px;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-sans: 'Syne', sans-serif;
+    }
+
+    html,
+    body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+    }
 
     /* ── Layout Shell ──────────────────────────────────── */
     .shell {
@@ -77,7 +90,9 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       white-space: nowrap;
     }
 
-    .header-logo span { color: var(--text-muted); }
+    .header-logo span {
+      color: var(--text-muted);
+    }
 
     .header-divider {
       width: 1px;
@@ -93,7 +108,9 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       font-size: 12px;
     }
 
-    .date-range label { color: var(--text-muted); }
+    .date-range label {
+      color: var(--text-muted);
+    }
 
     .date-range input[type="date"] {
       background: var(--surface2);
@@ -107,9 +124,13 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       cursor: pointer;
     }
 
-    .date-range input[type="date"]:focus { border-color: var(--accent); }
+    .date-range input[type="date"]:focus {
+      border-color: var(--accent);
+    }
 
-    .header-spacer { flex: 1; }
+    .header-spacer {
+      flex: 1;
+    }
 
     .header-user {
       font-family: var(--font-mono);
@@ -117,7 +138,9 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       color: var(--text-muted);
     }
 
-    .header-user strong { color: var(--text); }
+    .header-user strong {
+      color: var(--text);
+    }
 
     .btn-logout {
       background: transparent;
@@ -131,7 +154,10 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       transition: border-color 0.15s, color 0.15s;
     }
 
-    .btn-logout:hover { border-color: var(--danger); color: var(--danger); }
+    .btn-logout:hover {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
 
     /* ── Sidebar ───────────────────────────────────────── */
     .sidebar {
@@ -175,11 +201,21 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       cursor: pointer;
     }
 
-    .nav-link:hover { background: var(--surface2); color: var(--text); }
+    .nav-link:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
 
-    .nav-link.active { background: rgba(88,166,255,0.1); color: var(--accent); }
+    .nav-link.active {
+      background: rgba(88, 166, 255, 0.1);
+      color: var(--accent);
+    }
 
-    .nav-icon { font-size: 14px; width: 18px; text-align: center; }
+    .nav-icon {
+      font-size: 14px;
+      width: 18px;
+      text-align: center;
+    }
 
     /* ── Content ───────────────────────────────────────── */
     .content {
@@ -213,7 +249,9 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       transition: border-color 0.15s;
     }
 
-    .metric-card:hover { border-color: var(--border2); }
+    .metric-card:hover {
+      border-color: var(--border2);
+    }
 
     .metric-label {
       font-family: var(--font-mono);
@@ -258,7 +296,9 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       letter-spacing: 0.08em;
     }
 
-    .panel-body { padding: 20px; }
+    .panel-body {
+      padding: 20px;
+    }
 
     /* ── Tables ────────────────────────────────────────── */
     .data-table {
@@ -285,8 +325,13 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       color: var(--text);
     }
 
-    .data-table tr:last-child td { border-bottom: none; }
-    .data-table tr:hover td { background: var(--surface2); }
+    .data-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .data-table tr:hover td {
+      background: var(--surface2);
+    }
 
     /* ── Vitals Cards ──────────────────────────────────── */
     .vitals-grid {
@@ -340,7 +385,15 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       border-radius: var(--radius);
     }
 
-    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    @keyframes shimmer {
+      0% {
+        background-position: 200% 0;
+      }
+
+      100% {
+        background-position: -200% 0;
+      }
+    }
 
     .skeleton-cards {
       display: grid;
@@ -349,14 +402,23 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       margin-bottom: 28px;
     }
 
-    .skeleton-card { height: 88px; }
-    .skeleton-chart { height: 280px; margin-bottom: 20px; }
-    .skeleton-table { height: 200px; }
+    .skeleton-card {
+      height: 88px;
+    }
+
+    .skeleton-chart {
+      height: 280px;
+      margin-bottom: 20px;
+    }
+
+    .skeleton-table {
+      height: 200px;
+    }
 
     /* ── Error State ───────────────────────────────────── */
     .error-state {
-      background: rgba(248,81,73,0.08);
-      border: 1px solid rgba(248,81,73,0.3);
+      background: rgba(248, 81, 73, 0.08);
+      border: 1px solid rgba(248, 81, 73, 0.3);
       border-radius: var(--radius);
       padding: 20px;
       color: var(--danger);
@@ -383,7 +445,9 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
     }
 
     /* ── Slow row highlight ────────────────────────────── */
-    .row-slow td:first-child { border-left: 3px solid var(--danger); }
+    .row-slow td:first-child {
+      border-left: 3px solid var(--danger);
+    }
 
     /* ── Admin Form ────────────────────────────────────── */
     .form-grid {
@@ -392,7 +456,11 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       gap: 14px;
     }
 
-    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
 
     .form-group label {
       font-family: var(--font-mono);
@@ -416,7 +484,9 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
     }
 
     .form-group input:focus,
-    .form-group select:focus { border-color: var(--accent); }
+    .form-group select:focus {
+      border-color: var(--accent);
+    }
 
     .btn {
       font-family: var(--font-mono);
@@ -429,14 +499,37 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       transition: opacity 0.15s;
     }
 
-    .btn:hover { opacity: 0.85; }
-    .btn-primary { background: var(--accent); color: var(--bg); }
-    .btn-danger  { background: var(--danger); color: white; font-size: 11px; padding: 4px 10px; }
-    .btn-full    { width: 100%; margin-top: 6px; padding: 10px; }
+    .btn:hover {
+      opacity: 0.85;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+      font-size: 11px;
+      padding: 4px 10px;
+    }
+
+    .btn-full {
+      width: 100%;
+      margin-top: 6px;
+      padding: 10px;
+    }
 
     /* ── Expandable error rows ─────────────────────────── */
-    .detail-row { display: none; }
-    .detail-row.open { display: table-row; }
+    .detail-row {
+      display: none;
+    }
+
+    .detail-row.open {
+      display: table-row;
+    }
+
     .detail-cell {
       background: var(--bg) !important;
       font-family: var(--font-mono);
@@ -446,8 +539,13 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       padding: 12px 16px !important;
     }
 
-    .clickable { cursor: pointer; }
-    .clickable:hover td { background: var(--surface2); }
+    .clickable {
+      cursor: pointer;
+    }
+
+    .clickable:hover td {
+      background: var(--surface2);
+    }
 
     /* ── Hamburger (mobile) ────────────────────────────── */
     .hamburger {
@@ -475,93 +573,111 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
         width: 240px;
         height: calc(100vh - var(--header-h));
         z-index: 200;
-        box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
       }
 
-      .sidebar.open { display: block; }
-      .hamburger { display: block; }
+      .sidebar.open {
+        display: block;
+      }
 
-      .cards-grid { grid-template-columns: 1fr 1fr; }
-      .vitals-grid { grid-template-columns: 1fr; }
-      .content { padding: 16px; }
-      .date-range label { display: none; }
+      .hamburger {
+        display: block;
+      }
+
+      .cards-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .vitals-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .content {
+        padding: 16px;
+      }
+
+      .date-range label {
+        display: none;
+      }
     }
   </style>
 </head>
+
 <body>
-<div class="shell">
+  <div class="shell">
 
-  <!-- Header -->
-  <header class="header">
-    <button class="hamburger" id="hamburger">☰</button>
-    <a class="header-logo" href="#/overview">jgamba<span>.analytics</span></a>
-    <div class="header-divider"></div>
-    <div class="date-range">
-      <label for="date-start">From</label>
-      <input type="date" id="date-start">
-      <label for="date-end">To</label>
-      <input type="date" id="date-end">
-    </div>
-    <div class="header-spacer"></div>
-    <div class="header-user">signed in as <strong><?= $display_name ?></strong></div>
-    <button class="btn-logout" id="logout-btn">Sign out</button>
-  </header>
+    <!-- Header -->
+    <header class="header">
+      <button class="hamburger" id="hamburger">☰</button>
+      <a class="header-logo" href="#/overview">jgamba<span>.analytics</span></a>
+      <div class="header-divider"></div>
+      <div class="date-range">
+        <label for="date-start">From</label>
+        <input type="date" id="date-start">
+        <label for="date-end">To</label>
+        <input type="date" id="date-end">
+      </div>
+      <div class="header-spacer"></div>
+      <div class="header-user">signed in as <strong><?= $display_name ?></strong></div>
+      <button class="btn-logout" id="logout-btn">Sign out</button>
+    </header>
 
-  <!-- Sidebar -->
-  <nav>
-  <?php if ($_SESSION['role'] !== 'viewer'): ?>
+    <!-- Sidebar -->
+    <nav>
+      <?php if ($_SESSION['role'] !== 'viewer'): ?>
 
-    <?php if (in_array('overview', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
-    <a class="nav-link" href="#/overview">
-      <span class="nav-icon">◈</span> Overview
-    </a>
-    <?php endif; ?>
+        <?php if (in_array('overview', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
+          <a class="nav-link" href="#/overview">
+            <span class="nav-icon">◈</span> Overview
+          </a>
+        <?php endif; ?>
 
-    <?php if (in_array('performance', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
-    <a class="nav-link" href="#/performance">
-      <span class="nav-icon">◎</span> Performance
-    </a>
-    <?php endif; ?>
+        <?php if (in_array('performance', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
+          <a class="nav-link" href="#/performance">
+            <span class="nav-icon">◎</span> Performance
+          </a>
+        <?php endif; ?>
 
-    <?php if (in_array('errors', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
-    <a class="nav-link" href="#/errors">
-      <span class="nav-icon">⚠</span> Errors
-    </a>
-    <?php endif; ?>
+        <?php if (in_array('errors', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
+          <a class="nav-link" href="#/errors">
+            <span class="nav-icon">⚠</span> Errors
+          </a>
+        <?php endif; ?>
 
-    <?php if (in_array('rawdata', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
-    <a class="nav-link" href="#/rawdata">
-      <span class="nav-icon">◫</span> Raw Data
-    </a>
-    <?php endif; ?>
+        <?php if (in_array('rawdata', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
+          <a class="nav-link" href="#/rawdata">
+            <span class="nav-icon">◫</span> Raw Data
+          </a>
+        <?php endif; ?>
 
-  <?php endif; ?>
+      <?php endif; ?>
 
-  <!-- Everyone gets reports/briefing -->
-  <a class="nav-link" href="#/reports">
-    <span class="nav-icon">📋</span>
-    <?= $_SESSION['role'] === 'viewer' ? 'Briefings' : 'Reports' ?>
-  </a>
+      <!-- Everyone gets reports/briefing -->
+      <a class="nav-link" href="#/reports">
+        <span class="nav-icon">📋</span>
+        <?= $_SESSION['role'] === 'viewer' ? 'Briefings' : 'Reports' ?>
+      </a>
 
-  <?php if ($_SESSION['role'] === 'super_admin'): ?>
-  <a class="nav-link" href="#/admin">
-    <span class="nav-icon">⚙</span> Admin
-  </a>
-  <?php endif; ?>
-</nav>
+      <?php if ($_SESSION['role'] === 'super_admin'): ?>
+        <a class="nav-link" href="#/admin">
+          <span class="nav-icon">⚙</span> Admin
+        </a>
+      <?php endif; ?>
+    </nav>
 
-  <!-- Content -->
-  <main class="content" id="content">
-    <!-- JavaScript renders all views here -->
-  </main>
+    <!-- Content -->
+    <main class="content" id="content">
+      <!-- JavaScript renders all views here -->
+    </main>
 
-</div>
-<script src="assets/js/dashboard.js"></script>
-<script>
+  </div>
+  <script src="assets/js/dashboard.js"></script>
+  <script>
     window.SESSION_USER_ID = <?= (int)$_SESSION['user_id'] ?>;
     window.SESSION_USER_ROLE = <?= json_encode($_SESSION['role'] ?? 'viewer') ?>;
     window.SESSION_SECTIONS = <?= json_encode($_SESSION['sections'] ?? []) ?>;
     window.SESSION_NAME = <?= json_encode($_SESSION['display_name'] ?? '') ?>;
-</script>
+  </script>
 </body>
+
 </html>
