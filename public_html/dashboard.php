@@ -706,6 +706,7 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
     </main>
 
   </div>
+  <script src="/assests/js/report-builder.js"></script>
   <script src="assets/js/report-builder.js"></script>
   <script src="assets/js/dashboard.js"></script>
   <script>

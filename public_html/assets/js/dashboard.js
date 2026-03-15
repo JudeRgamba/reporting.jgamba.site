@@ -810,10 +810,7 @@ async function deleteReport(id, title) {
 
 // openReportBuilder in report-builder.js
 
-function openReportBriefing(report) {
-    // TODO — coming next  
-    alert('Briefing view coming soon');
-}
+// opemReportBriefing in report-briefing.js
 
 // View: Admin
 async function renderAdmin() {
