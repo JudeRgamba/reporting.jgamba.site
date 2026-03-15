@@ -963,86 +963,480 @@ async function renderPerformance(start, end) {
 async function renderErrors(start, end) {
     destroyAllCharts();
     showLoading();
-    const data = await apiFetch('/api/errors?start=' + start + '&end=' + end);
-    if (!data) return;
 
-    const byMessage = data.data?.byMessage || [];
-    const trend = data.data?.trend || [];
-    const total = byMessage.reduce((s, r) => s + Number(r.occurrences), 0);
+    const [errData, byTypeData, byPageData, byElementData, detailData, rateData, serverLogsData] =
+    await Promise.all([
+        apiFetch(`/api/errors?start=${start}&end=${end}`),
+        apiFetch(`/api/errors/by-type?start=${start}&end=${end}`),
+        apiFetch(`/api/errors/by-page?start=${start}&end=${end}`),
+        apiFetch(`/api/errors/by-element?start=${start}&end=${end}`),
+        apiFetch(`/api/errors/detail?start=${start}&end=${end}`),
+        apiFetch(`/api/errors/rate?start=${start}&end=${end}`),
+        apiFetch(`/api/errors/server-logs?start=${start}&end=${end}`),
+    ]);
+
+    const serverLogs = serverLogsData?.data || null;
+
+    const byMessage  = errData?.data?.byMessage  || [];
+    const trend      = errData?.data?.trend       || [];
+    const byType     = byTypeData?.data           || [];
+    const byPage     = byPageData?.data           || [];
+    const byElement  = byElementData?.data        || [];
+    const detail     = detailData?.data           || [];
+    const rateRows   = rateData?.data             || [];
+
+    const total         = byMessage.reduce((s, r) => s + Number(r.occurrences), 0);
+    const mostAffected  = byPage.length   ? byPage[0].url.replace('https://test.jgamba.site', '') || '/' : '—';
+    const topErrorType  = byType.length   ? byType[0].error_type  : '—';
+    const avgRate       = rateRows.length
+        ? (rateRows.reduce((a, r) => a + Number(r.error_rate || 0), 0) / rateRows.length).toFixed(2)
+        : '0';
+
+    // Comments panel
+    const commentsHTML = await renderCommentsPanel('errors', start, end);
 
     const content = document.getElementById('content');
     content.innerHTML = `
-    <div class="page-title">Errors</div>
-    <div class="cards-grid" style="grid-template-columns:repeat(1,260px)">
-      <div class="metric-card">
-        <div class="metric-label">Total Errors</div>
-        <div class="metric-value" style="color:var(--danger)">${total.toLocaleString()}</div>
-      </div>
-    </div>
-    <div class="panel">
-        ${panelHeader('Error Trend', trend, 'error-trend.csv')}
-        <div class="panel-body"><canvas id="err-chart"></canvas></div>
-    </div>
-    <div class="panel">
-        ${panelHeader('Errors by Message', byMessage, 'errors-by-message.csv')}
-        <div id="err-table"></div>
-    </div>
-  `;
+        <div class="page-title">Errors</div>
 
+        <!-- Summary Cards -->
+        <div class="cards-grid" id="error-cards"></div>
+
+        <!-- Error Trend + Error Rate side by side -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;" class="chart-row">
+            <div class="panel">
+                ${panelHeader('Error Trend', trend, 'error-trend.csv')}
+                <div class="panel-body" style="position:relative;min-height:200px;">
+                    <canvas id="err-chart"></canvas>
+                </div>
+            </div>
+            <div class="panel">
+                ${panelHeader('Error Rate (% of Pageviews)', rateRows, 'error-rate.csv')}
+                <div class="panel-body" style="position:relative;min-height:200px;">
+                    <canvas id="rate-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- By Type + By Element side by side -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;" class="chart-row">
+            <div class="panel">
+                ${panelHeader('Errors by Type', byType, 'errors-by-type.csv')}
+                <div class="panel-body" style="position:relative;min-height:200px;">
+                    <canvas id="type-chart"></canvas>
+                </div>
+            </div>
+            <div class="panel">
+                ${panelHeader('Errors by Element', byElement, 'errors-by-element.csv')}
+                <div class="panel-body" style="position:relative;min-height:200px;">
+                    <canvas id="element-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Errors by Page -->
+        <div class="panel" style="margin-bottom:20px;">
+            ${panelHeader('Errors by Page', byPage, 'errors-by-page.csv')}
+            <div class="panel-body" style="position:relative;min-height:200px;">
+                <canvas id="page-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Detailed Error Log -->
+        <div class="panel" style="margin-bottom:20px;">
+            ${panelHeader('Error Detail Log', detail, 'error-detail.csv')}
+            <div id="err-detail-table"></div>
+        </div>
+
+        <!-- Legacy grouped by message -->
+        <div class="panel" style="margin-bottom:20px;">
+            ${panelHeader('Errors by Message', byMessage, 'errors-by-message.csv')}
+            <div id="err-table"></div>
+        </div>
+
+        <!-- Server Log Errors -->
+        ${serverLogs ? `
+        <div class="panel" style="margin-bottom:20px;">
+            ${panelHeader('HTTP Server Errors', serverLogs.recent, 'server-errors.csv')}
+            <div style="padding:14px 20px;border-bottom:1px solid var(--border);
+                display:flex;gap:20px;flex-wrap:wrap;">
+                <span style="font-family:var(--font-mono);font-size:12px;">
+                    <span style="color:var(--danger);font-weight:600;">
+                        ${serverLogs.real_errors}
+                    </span>
+                    <span style="color:var(--text-dim);"> real errors</span>
+                </span>
+                <span style="font-family:var(--font-mono);font-size:12px;">
+                    <span style="color:var(--warn);font-weight:600;">
+                        ${serverLogs.bot_scans}
+                    </span>
+                    <span style="color:var(--text-dim);"> bot scans filtered</span>
+                </span>
+                ${serverLogs.by_status.map(s => `
+                <span style="font-family:var(--font-mono);font-size:12px;">
+                    <span style="color:${s.status >= 500 ? 'var(--danger)' : 'var(--warn)'};
+                        font-weight:600;">${s.status}</span>
+                    <span style="color:var(--text-dim);"> ×${s.count}</span>
+                </span>`).join('')}
+            </div>
+            <div id="server-log-table"></div>
+        </div>` : ''}
+        <!-- Comments -->
+        ${commentsHTML}
+    `;
+
+    // ── Summary Cards ─────────────────────────────────────
+    const cardData = [
+        { label: 'Total Errors',    value: total.toLocaleString(),    color: 'var(--danger)' },
+        { label: 'Avg Error Rate',  value: avgRate + '%',             color: 'var(--warn)'   },
+        { label: 'Most Affected',   value: mostAffected,              color: null            },
+        { label: 'Top Error Type',  value: topErrorType,              color: null            },
+    ];
+    const cardsEl = document.getElementById('error-cards');
+    cardData.forEach(c => {
+        const card = document.createElement('div');
+        card.className = 'metric-card';
+        card.innerHTML = `
+            <div class="metric-label">${c.label}</div>
+            <div class="metric-value" style="${c.color ? `color:${c.color}` : ''};
+                font-size:${c.value.length > 12 ? '14px' : '28px'};">
+                ${c.value}
+            </div>
+        `;
+        cardsEl.appendChild(card);
+    });
+
+    // ── Error Trend Line ──────────────────────────────────
     drawLineChart('err-chart', trend, 'day', 'error_count', '#f85149');
 
-    const tableEl = document.getElementById('err-table');
-    if (byMessage.length === 0) {
-        tableEl.innerHTML = '<div class="empty-state">No errors recorded 🎉</div>';
-        return;
+    // ── Error Rate Line ───────────────────────────────────
+    drawLineChart('rate-chart', rateRows, 'day', 'error_rate', '#d29922');
+
+    // ── Errors by Type Horizontal Bar ────────────────────
+    if (chartInstances['type-chart']) {
+        chartInstances['type-chart'].destroy();
+        delete chartInstances['type-chart'];
+    }
+    const typeCanvas = document.getElementById('type-chart');
+    if (typeCanvas && byType.length > 0) {
+        const typeColors = {
+            'resource-error':       '#d29922',
+            'js-error':             '#f85149',
+            'unhandled-rejection':  '#a371f7',
+            'unknown':              '#7d8590',
+        };
+        chartInstances['type-chart'] = new Chart(typeCanvas, {
+            type: 'bar',
+            data: {
+                labels: byType.map(t => t.error_type),
+                datasets: [{
+                    data: byType.map(t => Number(t.count)),
+                    backgroundColor: byType.map(t =>
+                        (typeColors[t.error_type] || '#7d8590') + '44'
+                    ),
+                    borderColor: byType.map(t =>
+                        typeColors[t.error_type] || '#7d8590'
+                    ),
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }],
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { beginAtZero: true, ticks: { color: '#7d8590' }, grid: { color: '#21262d' } },
+                    y: { ticks: { color: '#7d8590' }, grid: { display: false } },
+                },
+            },
+        });
+    } else if (typeCanvas) {
+        typeCanvas.parentElement.innerHTML =
+            '<div class="empty-state">No error type data</div>';
     }
 
-    const table = document.createElement('table');
-    table.className = 'data-table';
-    table.innerHTML = `
-    <thead>
-      <tr><th>Message</th><th>Count</th><th>Last Seen</th></tr>
-    </thead>
-  `;
-    const tbody = document.createElement('tbody');
-    byMessage.forEach((r) => {
-        // Summary row
-        const tr = document.createElement('tr');
-        tr.className = 'clickable';
+    // ── Errors by Element Horizontal Bar ──────────────────
+    if (chartInstances['element-chart']) {
+        chartInstances['element-chart'].destroy();
+        delete chartInstances['element-chart'];
+    }
+    const elCanvas = document.getElementById('element-chart');
+    if (elCanvas && byElement.length > 0) {
+        chartInstances['element-chart'] = new Chart(elCanvas, {
+            type: 'bar',
+            data: {
+                labels: byElement.map(e => e.element_type),
+                datasets: [{
+                    data: byElement.map(e => Number(e.count)),
+                    backgroundColor: '#58a6ff44',
+                    borderColor: '#58a6ff',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }],
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { beginAtZero: true, ticks: { color: '#7d8590' }, grid: { color: '#21262d' } },
+                    y: { ticks: { color: '#7d8590' }, grid: { display: false } },
+                },
+            },
+        });
+    } else if (elCanvas) {
+        elCanvas.parentElement.innerHTML =
+            '<div class="empty-state">No element error data</div>';
+    }
 
-        const tdMsg = document.createElement('td');
-        const short = String(r.error_message || '(unknown)').slice(0, 80);
-        tdMsg.textContent = short + (r.error_message && r.error_message.length > 80 ? '…' : '');
+    // ── Errors by Page Horizontal Bar ─────────────────────
+    if (chartInstances['page-chart']) {
+        chartInstances['page-chart'].destroy();
+        delete chartInstances['page-chart'];
+    }
+    const pageCanvas = document.getElementById('page-chart');
+    if (pageCanvas && byPage.length > 0) {
+        const pageLabels = byPage.map(p =>
+            p.url.replace('https://test.jgamba.site', '') || '/'
+        );
+        chartInstances['page-chart'] = new Chart(pageCanvas, {
+            type: 'bar',
+            data: {
+                labels: pageLabels,
+                datasets: [{
+                    label: 'Errors',
+                    data: byPage.map(p => Number(p.count)),
+                    backgroundColor: '#f8514944',
+                    borderColor: '#f85149',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }],
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => `${ctx.parsed.x} errors`
+                        }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true, ticks: { color: '#7d8590' }, grid: { color: '#21262d' } },
+                    y: { ticks: { color: '#7d8590', font: { size: 10 } }, grid: { display: false } },
+                },
+            },
+        });
+    } else if (pageCanvas) {
+        pageCanvas.parentElement.innerHTML =
+            '<div class="empty-state">No page error data</div>';
+    }
 
-        const tdCount = document.createElement('td');
-        tdCount.textContent = Number(r.occurrences).toLocaleString();
+    // ── Detail Error Log Table ────────────────────────────
+    const detailEl = document.getElementById('err-detail-table');
+    if (!detail || detail.length === 0) {
+        detailEl.innerHTML = '<div class="empty-state">No errors recorded 🎉</div>';
+    } else {
+        const wrap  = document.createElement('div');
+        wrap.className = 'table-wrap';
+        const table = document.createElement('table');
+        table.className = 'data-table';
+        table.innerHTML = `
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Type</th>
+                    <th>Element</th>
+                    <th>Page</th>
+                    <th>Detail</th>
+                    <th>Session</th>
+                </tr>
+            </thead>
+        `;
+        const tbody = document.createElement('tbody');
+        detail.forEach(r => {
+            const tr = document.createElement('tr');
+            const typeColors = {
+                'resource-error':      '#d29922',
+                'js-error':            '#f85149',
+                'unhandled-rejection': '#a371f7',
+            };
+            const tcolor = typeColors[r.error_type] || '#7d8590';
 
-        const tdDate = document.createElement('td');
-        tdDate.textContent = r.last_seen || '—';
+            // Time
+            const tdTime = document.createElement('td');
+            tdTime.style.fontFamily = 'var(--font-mono)';
+            tdTime.style.fontSize   = '11px';
+            tdTime.textContent = String(r.server_ts).slice(0, 19);
+            tr.appendChild(tdTime);
 
-        tr.appendChild(tdMsg);
-        tr.appendChild(tdCount);
-        tr.appendChild(tdDate);
+            // Type badge
+            const tdType = document.createElement('td');
+            const badge  = document.createElement('span');
+            badge.className = 'badge';
+            badge.textContent = r.error_type;
+            badge.style.background = tcolor + '22';
+            badge.style.color      = tcolor;
+            tdType.appendChild(badge);
+            tr.appendChild(tdType);
 
-        // Detail row
-        const detailTr = document.createElement('tr');
-        detailTr.className = 'detail-row';
-        const detailTd = document.createElement('td');
-        detailTd.colSpan = 3;
-        detailTd.className = 'detail-cell';
-        detailTd.textContent = r.error_message || '(no message)';
-        detailTr.appendChild(detailTd);
+            // Element
+            const tdEl = document.createElement('td');
+            tdEl.textContent = r.element_type || '—';
+            tr.appendChild(tdEl);
 
-        tr.addEventListener('click', () => detailTr.classList.toggle('open'));
+            // Page
+            const tdPage = document.createElement('td');
+            tdPage.textContent = r.url
+                ? r.url.replace('https://test.jgamba.site', '') || '/'
+                : '—';
+            tr.appendChild(tdPage);
 
-        tbody.appendChild(tr);
-        tbody.appendChild(detailTr);
-    });
-    table.appendChild(tbody);
-    const wrap = document.createElement('div');
-    wrap.className = 'table-wrap';
-    wrap.appendChild(table);
-    tableEl.appendChild(wrap);
+            // Detail
+            const tdDetail = document.createElement('td');
+            tdDetail.style.maxWidth   = '200px';
+            tdDetail.style.overflow   = 'hidden';
+            tdDetail.style.textOverflow = 'ellipsis';
+            tdDetail.style.whiteSpace = 'nowrap';
+            tdDetail.textContent = r.error_detail || '—';
+            tr.appendChild(tdDetail);
+
+            // Session
+            const tdSess = document.createElement('td');
+            tdSess.style.fontFamily = 'var(--font-mono)';
+            tdSess.style.fontSize   = '11px';
+            tdSess.textContent = r.session_id
+                ? String(r.session_id).slice(0, 12) + '…'
+                : '—';
+            tr.appendChild(tdSess);
+
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        wrap.appendChild(table);
+        detailEl.appendChild(wrap);
+    }
+
+    // ── Legacy Grouped by Message Table ──────────────────
+    const tableEl = document.getElementById('err-table');
+    if (!byMessage || byMessage.length === 0) {
+        tableEl.innerHTML = '<div class="empty-state">No grouped error data</div>';
+    } else {
+        const wrap  = document.createElement('div');
+        wrap.className = 'table-wrap';
+        const table = document.createElement('table');
+        table.className = 'data-table';
+        table.innerHTML = `
+            <thead>
+                <tr><th>Message</th><th>Count</th><th>Last Seen</th></tr>
+            </thead>
+        `;
+        const tbody = document.createElement('tbody');
+        byMessage.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.className = 'clickable';
+
+            const tdMsg = document.createElement('td');
+            const short = String(r.error_message || '(unknown)').slice(0, 80);
+            tdMsg.textContent = short +
+                (r.error_message && r.error_message.length > 80 ? '…' : '');
+
+            const tdCount = document.createElement('td');
+            tdCount.textContent = Number(r.occurrences).toLocaleString();
+
+            const tdDate = document.createElement('td');
+            tdDate.textContent = r.last_seen || '—';
+
+            tr.appendChild(tdMsg);
+            tr.appendChild(tdCount);
+            tr.appendChild(tdDate);
+
+            const detailTr = document.createElement('tr');
+            detailTr.className = 'detail-row';
+            const detailTd = document.createElement('td');
+            detailTd.colSpan = 3;
+            detailTd.className = 'detail-cell';
+            detailTd.textContent = r.error_message || '(no message)';
+            detailTr.appendChild(detailTd);
+
+            tr.addEventListener('click', () =>
+                detailTr.classList.toggle('open')
+            );
+
+            tbody.appendChild(tr);
+            tbody.appendChild(detailTr);
+        });
+        table.appendChild(tbody);
+        wrap.appendChild(table);
+        tableEl.appendChild(wrap);
+    }
+
+    // ── Server Log Table ──────────────────────────────────
+    if (serverLogs?.recent?.length > 0) {
+        const serverEl = document.getElementById('server-log-table');
+        if (serverEl) {
+            const wrap  = document.createElement('div');
+            wrap.className = 'table-wrap';
+            const table = document.createElement('table');
+            table.className = 'data-table';
+            table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Status</th>
+                        <th>Method</th>
+                        <th>Path</th>
+                        <th>IP</th>
+                        <th>Referer</th>
+                    </tr>
+                </thead>
+            `;
+            const tbody = document.createElement('tbody');
+            serverLogs.recent.forEach(r => {
+                const tr = document.createElement('tr');
+                const statusColor = r.status >= 500 ? '#f85149' :
+                                    r.status >= 400 ? '#d29922' : '#7d8590';
+
+                [
+                    r.timestamp || '—',
+                    null, // badge handled separately
+                    r.method,
+                    r.path,
+                    r.ip,
+                    r.referer || '—',
+                ].forEach((val, i) => {
+                    const td = document.createElement('td');
+                    if (i === 0) {
+                        td.style.fontFamily = 'var(--font-mono)';
+                        td.style.fontSize   = '11px';
+                        td.textContent = val;
+                    } else if (i === 1) {
+                        const badge = document.createElement('span');
+                        badge.className = 'badge';
+                        badge.textContent = r.status;
+                        badge.style.background = statusColor + '22';
+                        badge.style.color      = statusColor;
+                        td.appendChild(badge);
+                    } else {
+                        td.style.fontFamily = 'var(--font-mono)';
+                        td.style.fontSize   = '11px';
+                        td.textContent = val;
+                    }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            wrap.appendChild(table);
+            serverEl.appendChild(wrap);
+        }
+    }
 }
 
 // View: Raw Data
