@@ -372,7 +372,10 @@ async function renderOverview(start, end) {
         tbody.appendChild(tr);
     });
     table.appendChild(tbody);
-    topEl.appendChild(table);
+    const wrap = document.createElement('div');
+    wrap.className = 'table-wrap';
+    wrap.appendChild(table);
+    topEl.appendChild(wrap);
 }
 
 // View: Performance
@@ -482,7 +485,10 @@ async function renderPerformance(start, end) {
         tbody.appendChild(tr);
     });
     table.appendChild(tbody);
-    tableEl.appendChild(table);
+    const wrap = document.createElement('div');
+    wrap.className = 'table-wrap';
+    wrap.appendChild(table);
+    tableEl.appendChild(wrap);
 }
 
 // View: Errors
@@ -566,7 +572,10 @@ async function renderErrors(start, end) {
         tbody.appendChild(detailTr);
     });
     table.appendChild(tbody);
-    tableEl.appendChild(table);
+    const wrap = document.createElement('div');
+    wrap.className = 'table-wrap';
+    wrap.appendChild(table);
+    tableEl.appendChild(wrap);
 }
 
 // View: Raw Data
@@ -1008,7 +1017,10 @@ function renderUsersTable(users) {
     });
     table.appendChild(tbody);
     el.innerHTML = '';
-    el.appendChild(table);
+    const wrap = document.createElement('div');
+    wrap.className = 'table-wrap';
+    wrap.appendChild(table);
+    el.appendChild(wrap);
 }
 
 // Init

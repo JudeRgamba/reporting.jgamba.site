@@ -98,6 +98,7 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       width: 1px;
       height: 20px;
       background: var(--border2);
+      flex-shrink: 0;
     }
 
     .date-range {
@@ -136,6 +137,7 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       font-family: var(--font-mono);
       font-size: 12px;
       color: var(--text-muted);
+      white-space: nowrap;
     }
 
     .header-user strong {
@@ -152,6 +154,8 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       padding: 5px 12px;
       cursor: pointer;
       transition: border-color 0.15s, color 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .btn-logout:hover {
@@ -164,16 +168,11 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       grid-area: sidebar;
       background: var(--surface);
       border-right: 1px solid var(--border);
-      padding: 16px 0;
+      padding: 20px 8px;
       position: sticky;
       top: var(--header-h);
       height: calc(100vh - var(--header-h));
       overflow-y: auto;
-    }
-
-    .nav-section {
-      padding: 0 12px;
-      margin-bottom: 4px;
     }
 
     .nav-label {
@@ -215,19 +214,17 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       font-size: 14px;
       width: 18px;
       text-align: center;
-    }
-
-    .viewer-layout {
-      display: block;
-      padding: 20px;
+      flex-shrink: 0;
     }
 
     /* ── Content ───────────────────────────────────────── */
     .content {
       grid-area: content;
-      padding: 40px 48px;
+      padding: 28px 32px;
       overflow-y: auto;
+      overflow-x: hidden;
       min-height: calc(100vh - var(--header-h));
+      max-width: 100%;
     }
 
     /* ── Shared UI Components ──────────────────────────── */
@@ -239,6 +236,7 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       letter-spacing: -0.02em;
     }
 
+    /* ── Metric Cards ──────────────────────────────────── */
     .cards-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -282,6 +280,7 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       margin-top: 4px;
     }
 
+    /* ── Panels ────────────────────────────────────────── */
     .panel {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -303,11 +302,24 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
 
     .panel-body {
       padding: 20px;
+      overflow-x: hidden;
+    }
+
+    /* ── Charts ────────────────────────────────────────── */
+    canvas {
+      max-width: 100% !important;
+      height: auto !important;
     }
 
     /* ── Tables ────────────────────────────────────────── */
+    .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
     .data-table {
       width: 100%;
+      min-width: 480px;
       border-collapse: collapse;
       font-family: var(--font-mono);
       font-size: 12px;
@@ -440,6 +452,7 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       font-size: 13px;
     }
 
+    /* ── Badge ─────────────────────────────────────────── */
     .badge {
       display: inline-block;
       font-family: var(--font-mono);
@@ -493,6 +506,7 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       border-color: var(--accent);
     }
 
+    /* ── Buttons ───────────────────────────────────────── */
     .btn {
       font-family: var(--font-mono);
       font-size: 12px;
@@ -544,7 +558,7 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       background: transparent;
       color: #f85149;
       border: 1px solid #f8514944;
-      border-sradius: 6px;
+      border-radius: 6px;
       padding: 6px 14px;
       font-size: 13px;
       cursor: pointer;
@@ -587,7 +601,7 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       background: var(--surface2);
     }
 
-    /* ── Hamburger (mobile) ────────────────────────────── */
+    /* ── Hamburger ─────────────────────────────────────── */
     .hamburger {
       display: none;
       background: none;
@@ -596,17 +610,35 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       font-size: 20px;
       cursor: pointer;
       padding: 4px 8px;
+      flex-shrink: 0;
     }
 
-    /* ── Responsive ────────────────────────────────────── */
-    @media (max-width: 768px) {
+    /* ── Responsive: Large tablets ─────────────────────── */
+    @media (max-width: 1024px) {
       .content {
-        padding: 20px 16px;
+        padding: 24px;
       }
 
+      .cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .skeleton-cards {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    /* ── Responsive: Tablets ───────────────────────────── */
+    @media (max-width: 768px) {
       .shell {
         grid-template-columns: 1fr;
-        grid-template-areas: "header" "content";
+        grid-template-areas:
+          "header"
+          "content";
+      }
+
+      .content {
+        padding: 16px;
       }
 
       .sidebar {
@@ -629,23 +661,119 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       }
 
       .cards-grid {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
       }
 
       .vitals-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
       }
 
-      .content {
-        padding: 16px;
+      .skeleton-cards {
+        grid-template-columns: repeat(2, 1fr);
       }
 
       .date-range label {
         display: none;
       }
+
+      .metric-value {
+        font-size: 22px;
+      }
+
+      .vital-value {
+        font-size: 24px;
+      }
+
+      .page-title {
+        font-size: 18px;
+      }
     }
 
-    /* Viewer gets full width — no sidebar in grid */
+    /* ── Responsive: Mobile (iPhone 15 Pro = 393px) ────── */
+    @media (max-width: 480px) {
+      .content {
+        padding: 12px;
+      }
+
+      .cards-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+
+      .vitals-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+
+      .skeleton-cards {
+        grid-template-columns: 1fr;
+      }
+
+      .metric-card {
+        padding: 14px;
+      }
+
+      .metric-value {
+        font-size: 20px;
+      }
+
+      .metric-label {
+        font-size: 10px;
+      }
+
+      .vital-card {
+        padding: 14px;
+      }
+
+      .vital-value {
+        font-size: 22px;
+      }
+
+      .panel-header {
+        font-size: 11px;
+        padding: 10px 14px;
+      }
+
+      .panel-body {
+        padding: 12px;
+      }
+
+      .page-title {
+        font-size: 16px;
+        margin-bottom: 16px;
+      }
+
+      .header {
+        padding: 0 12px;
+        gap: 8px;
+      }
+
+      .header-user {
+        display: none;
+      }
+
+      .date-range input[type="date"] {
+        font-size: 11px;
+        padding: 3px 6px;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .btn-primary,
+      .btn-secondary,
+      .btn-danger {
+        font-size: 12px;
+        padding: 6px 10px;
+      }
+    }
+
+    /* ── Viewer: full width layout ─────────────────────── */
     <?php if ($_SESSION['role'] === 'viewer'): ?>.shell {
       grid-template-columns: 1fr !important;
       grid-template-areas:
@@ -718,7 +846,7 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
     <?php endif; ?>
 
     <!-- Content -->
-    <main class="main">
+    <main class="content" class="main">
       <div id="content"></div>
     </main>
 
