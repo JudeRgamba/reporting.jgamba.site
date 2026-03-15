@@ -833,7 +833,7 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       }
 
       .header-spacer {
-        display: none;
+        flex: 1;
       }
 
       .header-user {
@@ -873,6 +873,7 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       .btn-logout {
         font-size: 10px;
         padding: 4px 8px;
+        flex-shrink: 0;
       }
     }
 
