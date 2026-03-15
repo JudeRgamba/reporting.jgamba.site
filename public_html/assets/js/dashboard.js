@@ -1687,7 +1687,8 @@ function makeFilterableTable(containerId, columns, rows) {
     let colFilter = '';
 
     function renderRows() {
-        const tbody = document.getElementById(`${containerId}-tbody`);
+        const tbody    = el.querySelector(`#${containerId}-tbody`);
+        const countEl  = el.querySelector(`#${containerId}-count`);
         if (!tbody) return;
 
         if (filtered.length === 0) {
@@ -1698,7 +1699,7 @@ function makeFilterableTable(containerId, columns, rows) {
                     No results match your filter
                 </td></tr>
             `;
-            document.getElementById(`${containerId}-count`).textContent = '0 rows';
+            if (countEl) countEl.textContent = '0 rows';
             return;
         }
 
@@ -1706,11 +1707,9 @@ function makeFilterableTable(containerId, columns, rows) {
         filtered.forEach(row => {
             const tr = document.createElement('tr');
             columns.forEach(col => {
-                const td = document.createElement('td');
+                const td  = document.createElement('td');
                 const val = row[col.key];
-
                 if (col.render) {
-                    // Custom renderer passed in column def
                     col.render(td, val, row);
                 } else {
                     td.textContent = val ?? '—';
@@ -1728,10 +1727,10 @@ function makeFilterableTable(containerId, columns, rows) {
                 }
                 tr.appendChild(td);
             });
+            tbody.appendChild(tr);
         });
 
-        document.getElementById(`${containerId}-count`).textContent =
-            `${filtered.length} of ${rows.length} rows`;
+        if (countEl) countEl.textContent = `${filtered.length} of ${rows.length} rows`;
     }
 
     function applyFilters() {
@@ -1778,21 +1777,21 @@ function makeFilterableTable(containerId, columns, rows) {
 
     // ── Event listeners ───────────────────────────────────
     // Search input
-    document.getElementById(`${containerId}-search`)
+    el.getElementById(`${containerId}-search`)
         ?.addEventListener('input', e => {
             searchVal = e.target.value;
             applyFilters();
         });
 
     // Column selector
-    document.getElementById(`${containerId}-col`)
+    el.getElementById(`${containerId}-col`)
         ?.addEventListener('change', e => {
             colFilter = e.target.value;
             applyFilters();
         });
 
     // Clear button
-    document.getElementById(`${containerId}-clear`)
+    el.getElementById(`${containerId}-clear`)
         ?.addEventListener('click', () => {
             searchVal = '';
             colFilter = '';
@@ -1804,7 +1803,7 @@ function makeFilterableTable(containerId, columns, rows) {
         });
 
     // Column header sort
-    document.getElementById(`${containerId}-table`)
+    el.getElementById(`${containerId}-table`)
         ?.querySelectorAll('th[data-sort]')
         .forEach(th => {
             th.addEventListener('click', () => {
@@ -1816,7 +1815,7 @@ function makeFilterableTable(containerId, columns, rows) {
                     sortDir = 'asc';
                 }
                 // Update sort icons
-                document.querySelectorAll('.sort-icon').forEach(icon => {
+                el.querySelectorAll('.sort-icon').forEach(icon => {
                     icon.textContent = '↕';
                     icon.style.color = 'var(--text-dim)';
                 });
