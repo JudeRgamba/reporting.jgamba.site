@@ -792,11 +792,22 @@ async function deleteReport(id, title) {
     }
 }
 
+// Report Builder
+function openReportBuilder(report) {
+    // TODO — coming next
+    alert('Report builder coming soon');
+}
+
+function openReportBriefing(report) {
+    // TODO — coming next  
+    alert('Briefing view coming soon');
+}
+
 // View: Admin
 async function renderAdmin() {
     showLoading();
-    const users = await apiFetch('/users-admin.php');
-    if (!users) return;
+    const res = await apiFetch('/users-admin.php');
+    if (!res) return;
 
     const content = document.getElementById('content');
     content.innerHTML = `
@@ -833,6 +844,23 @@ async function renderAdmin() {
               <option value="super_admin">Super Admin</option>
             </select>
           </div>
+          <div class="form-group" id="sections-group" style="display:none;">
+              <label>Assigned Sections</label>
+              <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+                  <label style="text-transform:none;font-size:13px;">
+                      <input type="checkbox" value="overview"> Overview
+                  </label>
+                  <label style="text-transform:none;font-size:13px;">
+                      <input type="checkbox" value="performance"> Performance
+                  </label>
+                  <label style="text-transform:none;font-size:13px;">
+                      <input type="checkbox" value="errors"> Errors
+                  </label>
+                  <label style="text-transform:none;font-size:13px;">
+                      <input type="checkbox" value="rawdata"> Raw Data
+                  </label>
+              </div>
+          </div>
         </div>
         <button class="btn btn-primary btn-full" id="add-user-btn">Add User</button>
         <div id="add-user-msg" style="margin-top:10px;font-family:var(--font-mono);font-size:12px;"></div>
@@ -840,7 +868,7 @@ async function renderAdmin() {
     </div>
   `;
 
-    renderUsersTable(users);
+    renderUsersTable(res.data || []);
 
     document.getElementById('add-user-btn').addEventListener('click', async () => {
         const username = document.getElementById('new-username').value.trim();
@@ -849,6 +877,11 @@ async function renderAdmin() {
         const password = document.getElementById('new-password').value;
         const role = document.getElementById('new-role').value;
         const msgEl = document.getElementById('add-user-msg');
+
+        const sections = role === 'analyst'
+          ? [...document.querySelectorAll('#sections-group input:checked')]
+              .map(cb => cb.value)
+          : [];
 
         if (!username || !email || !password) {
             msgEl.style.color = 'var(--danger)';
@@ -861,7 +894,7 @@ async function renderAdmin() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ username, email, display_name: display, password, role }),
+                body: JSON.stringify({ username, email, display_name: display, password, role, sections }),
             });
             const data = await res.json();
             if (res.ok && data.success) {
@@ -873,7 +906,7 @@ async function renderAdmin() {
                 document.getElementById('new-password').value = '';
                 // Refresh table
                 const updated = await apiFetch('/users-admin.php');
-                if (updated) renderUsersTable(updated);
+                if (updated) renderUsersTable(updated.data || []);
             } else {
                 msgEl.style.color = 'var(--danger)';
                 msgEl.textContent = data.error || 'Failed to create user.';
@@ -882,6 +915,10 @@ async function renderAdmin() {
             msgEl.style.color = 'var(--danger)';
             msgEl.textContent = 'Network error.';
         }
+    });
+    document.getElementById('new-role').addEventListener('change', (e) => {
+      document.getElementById('sections-group').style.display =
+          e.target.value === 'analyst' ? 'block' : 'none';
     });
 }
 
@@ -939,7 +976,7 @@ function renderUsersTable(users) {
             const data = await res.json();
             if (data.success) {
                 const updated = await apiFetch('/users-admin.php');
-                if (updated) renderUsersTable(updated);
+                if (updated) renderUsersTable(updated.data || []);
             } else {
                 alert(data.error || 'Could not delete user.');
             }
