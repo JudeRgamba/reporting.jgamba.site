@@ -109,6 +109,20 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       font-size: 12px;
     }
 
+    .date-range-btn {
+      display: none;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 5px 10px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
     .date-range label {
       color: var(--text-muted);
     }
@@ -834,9 +848,11 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       }
 
       .date-range {
-        flex: 1;
-        gap: 4px;
-        min-width: 0;
+        display: none;
+      }
+
+      .date-range-btn {
+        display: block;
       }
 
       .date-range label {
@@ -888,6 +904,7 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
         <label for="date-end">To</label>
         <input type="date" id="date-end">
       </div>
+      <button class="date-range-btn" id="date-range-btn">📅 Set Date</button>
       <div class="header-spacer"></div>
       <div class="header-user">signed in as <strong><?= $display_name ?></strong></div>
       <button class="btn-logout" id="logout-btn">Sign out</button>
@@ -938,6 +955,82 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       <div id="content"></div>
     </main>
 
+    <!-- Mobile date picker modal -->
+    <div id="date-modal" style="
+      display:none;
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,0.6);
+      z-index:300;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+    ">
+      <div style="
+          background:var(--surface);
+          border:1px solid var(--border);
+          border-radius:12px;
+          padding:24px;
+          width:100%;
+          max-width:320px;
+      ">
+        <div style="font-size:15px;font-weight:700;margin-bottom:20px;">
+          Set Date Range
+        </div>
+        <div style="margin-bottom:14px;">
+          <label style="
+                  display:block;
+                  font-family:var(--font-mono);
+                  font-size:11px;
+                  color:var(--text-muted);
+                  text-transform:uppercase;
+                  letter-spacing:0.06em;
+                  margin-bottom:6px;
+              ">From</label>
+          <input type="date" id="modal-date-start" style="
+                  width:100%;
+                  padding:10px 12px;
+                  background:var(--bg);
+                  border:1px solid var(--border2);
+                  border-radius:var(--radius);
+                  color:var(--text);
+                  font-family:var(--font-mono);
+                  font-size:13px;
+                  outline:none;
+              ">
+        </div>
+        <div style="margin-bottom:20px;">
+          <label style="
+                  display:block;
+                  font-family:var(--font-mono);
+                  font-size:11px;
+                  color:var(--text-muted);
+                  text-transform:uppercase;
+                  letter-spacing:0.06em;
+                  margin-bottom:6px;
+              ">To</label>
+          <input type="date" id="modal-date-end" style="
+                  width:100%;
+                  padding:10px 12px;
+                  background:var(--bg);
+                  border:1px solid var(--border2);
+                  border-radius:var(--radius);
+                  color:var(--text);
+                  font-family:var(--font-mono);
+                  font-size:13px;
+                  outline:none;
+              ">
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button id="date-modal-cancel" class="btn-secondary" style="flex:1;">
+            Cancel
+          </button>
+          <button id="date-modal-apply" class="btn-primary" style="flex:1;">
+            Apply
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
   <script>
     window.SESSION_USER_ID = <?= (int)$_SESSION['user_id'] ?>;

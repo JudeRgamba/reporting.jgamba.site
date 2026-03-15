@@ -1040,6 +1040,41 @@ function init() {
         document.getElementById('sidebar-overlay')?.classList.toggle('visible');
     });
 
+    // Mobile date picker modal
+    const dateRangeBtn   = document.getElementById('date-range-btn');
+    const dateModal      = document.getElementById('date-modal');
+    const modalStart     = document.getElementById('modal-date-start');
+    const modalEnd       = document.getElementById('modal-date-end');
+    const dateModalApply  = document.getElementById('date-modal-apply');
+    const dateModalCancel = document.getElementById('date-modal-cancel');
+
+    if (dateRangeBtn && dateModal) {
+        // Open modal — pre-fill with current values
+        dateRangeBtn.addEventListener('click', () => {
+            modalStart.value = document.getElementById('date-start').value;
+            modalEnd.value   = document.getElementById('date-end').value;
+            dateModal.style.display = 'flex';
+        });
+
+        // Apply — sync values back to real inputs and re-route
+        dateModalApply.addEventListener('click', () => {
+            document.getElementById('date-start').value = modalStart.value;
+            document.getElementById('date-end').value   = modalEnd.value;
+            dateModal.style.display = 'none';
+            route(); // re-render current view with new dates
+        });
+
+        // Cancel
+        dateModalCancel.addEventListener('click', () => {
+            dateModal.style.display = 'none';
+        });
+
+        // Click outside modal to close
+        dateModal.addEventListener('click', (e) => {
+            if (e.target === dateModal) dateModal.style.display = 'none';
+        });
+    }
+
     // Click outside sidebar to close it
     document.getElementById('sidebar-overlay')?.addEventListener('click', () => {
         document.getElementById('sidebar')?.classList.remove('open');
