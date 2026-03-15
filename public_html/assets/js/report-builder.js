@@ -62,8 +62,8 @@ async function openReportBuilder(existingReport) {
     const err  = errData?.data       || {};
 
     // Build viewer list for sharing
-    const allUsers   = viewerData?.data || [];
-    const viewers    = allUsers.filter(u => u.role === 'viewer');
+    const viewers   = viewerData?.data || [];
+    
     const existingAccess = existingReport
         ? (await apiFetch(`/api/reports/${existingReport.id}/access`).catch(() => null))?.data || []
         : [];
