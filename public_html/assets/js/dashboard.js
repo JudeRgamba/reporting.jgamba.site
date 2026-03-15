@@ -171,7 +171,12 @@ function drawLineChart(canvasId, data, xKey, yKey, color) {
         return;
     }
 
-    const labels = data.map((d) => String(d[xKey]).slice(5)); // trim year from date
+    const labels = data.map((d) => {
+    const raw = String(d[xKey]);
+        // Handle both '2026-02-28' and '2026-02-28T00:00:00.000Z'
+        const dateOnly = raw.slice(0, 10); // always gets YYYY-MM-DD
+        return dateOnly.slice(5); // returns MM-DD
+    });
     const values = data.map((d) => Number(d[yKey]));
 
     chartInstances[canvasId] = new Chart(canvas, {
