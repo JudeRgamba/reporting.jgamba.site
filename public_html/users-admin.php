@@ -1,6 +1,9 @@
 <?php
 require_once 'includes/admin-auth.php';
 
+// Debug flag
+error_log('users-admin role: ' . ($_SESSION['role'] ?? 'NOT SET'));
+
 $method  = $_SERVER['REQUEST_METHOD'];
 $nodeUrl = 'http://localhost:3006/api/users';
 
