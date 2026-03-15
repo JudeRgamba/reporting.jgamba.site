@@ -712,7 +712,7 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
   <script src="assets/js/dashboard.js"></script>
   <script>
     window.SESSION_USER_ID = <?= (int)$_SESSION['user_id'] ?>;
-    window.SESSION_USER_ROLE = <?= json_encode($_SESSION['role'] ?? 'viewer') ?>;
+    window.SESSION_ROLE = <?= json_encode($_SESSION['role'] ?? 'viewer') ?>;
     window.SESSION_SECTIONS = <?= json_encode($_SESSION['sections'] ?? []) ?>;
     window.SESSION_NAME = <?= json_encode($_SESSION['display_name'] ?? '') ?>;
   </script>
