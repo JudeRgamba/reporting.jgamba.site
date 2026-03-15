@@ -1,19 +1,14 @@
 <?php
 require_once 'includes/admin-auth.php';
 
-// Debug flag
-error_log('users-admin role: ' . ($_SESSION['role'] ?? 'NOT SET'));
-
 $method  = $_SERVER['REQUEST_METHOD'];
 $nodeUrl = 'http://localhost:3006/api/users';
 
-// Get user ID from query param instead of PATH_INFO
 $userId = $_GET['id'] ?? null;
 if ($userId) {
     $nodeUrl .= '/' . intval($userId);
 }
 
-// Append self param for delete
 $self = $_GET['self'] ?? null;
 if ($self) {
     $nodeUrl .= '?self=' . intval($self);
@@ -22,7 +17,12 @@ if ($self) {
 $opts = [
     'http' => [
         'method'  => $method,
-        'header'  => "Content-Type: application/json\r\n",
+        'header'  => implode("\r\n", [
+            'Content-Type: application/json',
+            'X-User-Role: '     . ($_SESSION['role'] ?? 'viewer'),
+            'X-User-Sections: ' . json_encode($_SESSION['sections'] ?? []),
+            'X-User-Id: '       . ($_SESSION['user_id'] ?? ''),
+        ]),
         'content' => file_get_contents('php://input'),
         'ignore_errors' => true
     ]
