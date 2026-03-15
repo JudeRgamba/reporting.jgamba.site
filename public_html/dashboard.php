@@ -539,6 +539,8 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
 <script>
     window.SESSION_USER_ID = <?= (int)$_SESSION['user_id'] ?>;
     window.SESSION_USER_ROLE = <?= json_encode($_SESSION['role'] ?? 'viewer') ?>;
+    window.SESSION_SECTIONS = <?= json_encode($_SESSION['sections'] ?? []) ?>;
+    window.SESSION_NAME = <?= json_encode($_SESSION['display_name'] ?? '') ?>;
 </script>
 </body>
 </html>

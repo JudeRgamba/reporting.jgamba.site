@@ -38,6 +38,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $_SESSION['display_name'] = $user['display_name'] ?? $user['username'];
   $_SESSION['role'] = $user['role'];
 
+  // Load section assignments for analysts
+  $sections = [];
+  if ($user['role'] === 'super_admin') {
+    $sections = ['overview', 'performance', 'errors', 'rawdata', 'reports'];
+  } elseif ($user['role'] === 'analyst') {
+    $sectionStmt = $pdo->prepare(
+        'SELECT section FROM analyst_sections WHERE user_id = ?'
+    );
+    $sectionStmt->execute([$user['id']]);
+    $sections = $sectionStmt->fetchAll(PDO::FETCH_COLUMN);
+    // analysts always get reports section so they can create/save reports
+    if (!in_array('reports', $sections)) {
+        $sections[] = 'reports';
+    }
+  }
+
+  // Viewers get no sections
+  $_SESSION['sections'] = $sections;
+
   $pdo->prepare('UPDATE users SET last_login = NOW() WHERE id = ?')
       ->execute([$user['id']]);
 
