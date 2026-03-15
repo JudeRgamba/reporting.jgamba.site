@@ -560,17 +560,20 @@ async function renderOverview(start, end) {
 // View: Performance
 async function renderPerformance(start, end) {
     showLoading();
-    const data = await apiFetch('/api/performance?start=' + start + '&end=' + end);
-    if (!data) return;
 
-    const byPage = data.data?.byPage || [];
+    const [perfData, distData] = await Promise.all([
+        apiFetch(`/api/performance?start=${start}&end=${end}`),
+        apiFetch(`/api/performance/distribution?start=${start}&end=${end}`),
+    ]);
+
+    if (!perfData) return;
+
+    const byPage   = perfData.data?.byPage || [];
+    const distRows = distData?.data        || [];
 
     // Compute weighted site-wide averages
-    let totalLcp = 0,
-        totalCls = 0,
-        totalInp = 0,
-        totalSamples = 0;
-    byPage.forEach((r) => {
+    let totalLcp = 0, totalCls = 0, totalInp = 0, totalSamples = 0;
+    byPage.forEach(r => {
         const s = Number(r.samples) || 0;
         totalLcp += (Number(r.avg_lcp) || 0) * s;
         totalCls += (Number(r.avg_cls) || 0) * s;
@@ -581,91 +584,378 @@ async function renderPerformance(start, end) {
     const avgCls = totalSamples ? totalCls / totalSamples : 0;
     const avgInp = totalSamples ? totalInp / totalSamples : 0;
 
+    // Scatter data — one point per page
+    const scatterData = byPage
+        .filter(r => r.avg_ttfb_ms && r.avg_load_ms)
+        .map(r => ({
+            x:     Number(r.avg_ttfb_ms),
+            y:     Number(r.avg_load_ms),
+            label: r.url.replace('https://test.jgamba.site', '') || '/',
+        }));
+
+    // Comments panel
+    const commentsHTML = await renderCommentsPanel('performance', start, end);
+
     const content = document.getElementById('content');
     content.innerHTML = `
-    <div class="page-title">Performance</div>
-    <div class="vitals-grid" id="vitals"></div>
-    <div class="panel">
-        ${panelHeader('Web Vitals Comparison', byPage, 'vitals.csv')}
-        <div class="panel-body"><canvas id="vitals-chart"></canvas></div>
-    </div>
-    <div class="panel">
-        ${panelHeader('Per-Page Breakdown', byPage, 'performance-by-page.csv')}
-        <div id="perf-table"></div>
-    </div>
-  `;
+        <div class="page-title">Performance</div>
 
-    // Vitals cards
+        <!-- Vitals summary cards -->
+        <div class="vitals-grid" id="vitals"></div>
+
+        <!-- Small multiples — 3 separate vitals charts -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:20px;" class="chart-row-3">
+            <div class="panel">
+                ${panelHeader('LCP', [{ metric: 'LCP', value: Math.round(avgLcp), unit: 'ms' }], 'lcp.csv')}
+                <div class="panel-body" style="position:relative;min-height:180px;">
+                    <canvas id="lcp-chart"></canvas>
+                </div>
+            </div>
+            <div class="panel">
+                ${panelHeader('CLS', [{ metric: 'CLS', value: avgCls.toFixed(4) }], 'cls.csv')}
+                <div class="panel-body" style="position:relative;min-height:180px;">
+                    <canvas id="cls-chart"></canvas>
+                </div>
+            </div>
+            <div class="panel">
+                ${panelHeader('INP', [{ metric: 'INP', value: Math.round(avgInp), unit: 'ms' }], 'inp.csv')}
+                <div class="panel-body" style="position:relative;min-height:180px;">
+                    <canvas id="inp-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- TTFB vs Load Scatter + Speed Distribution side by side -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;" class="chart-row">
+            <div class="panel">
+                ${panelHeader('TTFB vs Load Time', scatterData.map(d => ({ page: d.label, ttfb_ms: d.x, load_ms: d.y })), 'ttfb-vs-load.csv')}
+                <div class="panel-body" style="position:relative;min-height:240px;">
+                    <canvas id="scatter-chart"></canvas>
+                </div>
+            </div>
+            <div class="panel">
+                ${panelHeader('Page Speed Distribution', distRows, 'speed-distribution.csv')}
+                <div class="panel-body" style="position:relative;min-height:240px;">
+                    <canvas id="dist-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Per-page breakdown table -->
+        <div class="panel" style="margin-bottom:20px;">
+            ${panelHeader('Per-Page Breakdown', byPage, 'performance-by-page.csv')}
+            <div id="perf-table"></div>
+        </div>
+
+        <!-- Comments -->
+        ${commentsHTML}
+    `;
+
+    // ── Vitals Summary Cards ──────────────────────────────
     const vitals = [
         { name: 'LCP', key: 'lcp', value: avgLcp, display: Math.round(avgLcp) + 'ms' },
-        { name: 'CLS', key: 'cls', value: avgCls, display: avgCls.toFixed(3) },
-        { name: 'INP', key: 'inp', value: avgInp, display: Math.round(avgInp) + 'ms' },
+        { name: 'CLS', key: 'cls', value: avgCls, display: avgCls.toFixed(3)          },
+        { name: 'INP', key: 'inp', value: avgInp, display: Math.round(avgInp) + 'ms'  },
     ];
     const vitalsEl = document.getElementById('vitals');
-    vitals.forEach((v) => {
+    vitals.forEach(v => {
         const color = vitalColor(v.key, v.value);
         const label = vitalLabel(v.key, v.value);
-        const card = document.createElement('div');
+        const card  = document.createElement('div');
         card.className = 'vital-card';
         card.innerHTML = `
-      <div class="vital-name">${v.name}</div>
-      <div class="vital-value" style="color:${color}">${v.display}</div>
-      <span class="vital-badge" style="background:${color}22;color:${color}">${label}</span>
-    `;
+            <div class="vital-name">${v.name}</div>
+            <div class="vital-value" style="color:${color}">${v.display}</div>
+            <span class="vital-badge" style="background:${color}22;color:${color}">${label}</span>
+        `;
         vitalsEl.appendChild(card);
     });
 
-    drawBarChart(
-        'vitals-chart',
-        ['LCP (ms)', 'INP (ms)', 'CLS ×1000'],
-        [Math.round(avgLcp), Math.round(avgInp), Math.round(avgCls * 1000)],
-        [vitalColor('lcp', avgLcp), vitalColor('inp', avgInp), vitalColor('cls', avgCls)]
-    );
+    // ── Small Multiples — vitals with threshold bands ─────
+    function drawVitalChart(canvasId, metric, value, thresholds, unit) {
+        if (chartInstances[canvasId]) {
+            chartInstances[canvasId].destroy();
+            delete chartInstances[canvasId];
+        }
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
 
-    // Per-page table
+        const color = vitalColor(metric, value);
+        const label = vitalLabel(metric, value);
+        const [good, poor] = thresholds;
+
+        // Max axis value — give room above worst threshold
+        const axisMax = Math.max(value * 1.4, poor * 1.3);
+
+        chartInstances[canvasId] = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: [metric.toUpperCase()],
+                datasets: [
+                    {
+                        // Actual value bar
+                        label: label,
+                        data: [value],
+                        backgroundColor: color + '99',
+                        borderColor: color,
+                        borderWidth: 2,
+                        borderRadius: 4,
+                        barThickness: 60,
+                        order: 1,
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => `${ctx.parsed.y}${unit} — ${label}`
+                        }
+                    },
+                    annotation: {
+                        annotations: {
+                            goodLine: {
+                                type: 'line',
+                                yMin: good,
+                                yMax: good,
+                                borderColor: '#3fb950',
+                                borderWidth: 1,
+                                borderDash: [4, 4],
+                                label: {
+                                    display: true,
+                                    content: `Good < ${good}${unit}`,
+                                    position: 'end',
+                                    color: '#3fb950',
+                                    font: { size: 10 },
+                                    backgroundColor: 'transparent',
+                                }
+                            },
+                            poorLine: {
+                                type: 'line',
+                                yMin: poor,
+                                yMax: poor,
+                                borderColor: '#f85149',
+                                borderWidth: 1,
+                                borderDash: [4, 4],
+                                label: {
+                                    display: true,
+                                    content: `Poor > ${poor}${unit}`,
+                                    position: 'end',
+                                    color: '#f85149',
+                                    font: { size: 10 },
+                                    backgroundColor: 'transparent',
+                                }
+                            },
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#7d8590' },
+                        grid:  { display: false },
+                    },
+                    y: {
+                        beginAtZero: true,
+                        max: axisMax,
+                        ticks: {
+                            color: '#7d8590',
+                            callback: v => v + unit,
+                        },
+                        grid: { color: '#21262d' },
+                    },
+                },
+            },
+        });
+    }
+
+    // Chart.js annotation plugin — load it if not already loaded
+    if (!window.ChartAnnotationLoaded) {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js';
+        script.onload = () => {
+            window.ChartAnnotationLoaded = true;
+            drawVitalChart('lcp-chart', 'lcp', avgLcp, [2500, 4000], 'ms');
+            drawVitalChart('cls-chart', 'cls', avgCls, [0.1,  0.25], '');
+            drawVitalChart('inp-chart', 'inp', avgInp, [200,  500],  'ms');
+        };
+        document.head.appendChild(script);
+    } else {
+        drawVitalChart('lcp-chart', 'lcp', avgLcp, [2500, 4000], 'ms');
+        drawVitalChart('cls-chart', 'cls', avgCls, [0.1,  0.25], '');
+        drawVitalChart('inp-chart', 'inp', avgInp, [200,  500],  'ms');
+    }
+
+    // ── TTFB vs Load Scatter ──────────────────────────────
+    if (chartInstances['scatter-chart']) {
+        chartInstances['scatter-chart'].destroy();
+        delete chartInstances['scatter-chart'];
+    }
+    const scatterCanvas = document.getElementById('scatter-chart');
+    if (scatterCanvas && scatterData.length > 0) {
+        chartInstances['scatter-chart'] = new Chart(scatterCanvas, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Pages',
+                    data: scatterData,
+                    backgroundColor: scatterData.map(d =>
+                        d.y > 3000 ? '#f8514999' :
+                        d.y > 1500 ? '#d2992299' : '#3fb95099'
+                    ),
+                    pointRadius: 7,
+                    pointHoverRadius: 9,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => {
+                                const d = ctx.raw;
+                                return [
+                                    d.label,
+                                    `TTFB: ${d.x}ms`,
+                                    `Load: ${d.y}ms`,
+                                ];
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'TTFB (ms)',
+                            color: '#7d8590',
+                            font: { size: 11 },
+                        },
+                        ticks: { color: '#7d8590', callback: v => v + 'ms' },
+                        grid:  { color: '#21262d' },
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Load Time (ms)',
+                            color: '#7d8590',
+                            font: { size: 11 },
+                        },
+                        beginAtZero: true,
+                        ticks: { color: '#7d8590', callback: v => v + 'ms' },
+                        grid: { color: '#21262d' },
+                    },
+                },
+            },
+        });
+    } else if (scatterCanvas) {
+        scatterCanvas.parentElement.innerHTML =
+            '<div class="empty-state">Not enough data for scatter plot</div>';
+    }
+
+    // ── Speed Distribution Histogram ──────────────────────
+    if (chartInstances['dist-chart']) {
+        chartInstances['dist-chart'].destroy();
+        delete chartInstances['dist-chart'];
+    }
+    const distCanvas = document.getElementById('dist-chart');
+    const bucketOrder = ['0-500ms', '500ms-1s', '1-2s', '2-3s', '3s+'];
+    const sortedDist  = bucketOrder.map(b =>
+        distRows.find(r => r.bucket === b) || { bucket: b, count: 0 }
+    );
+    if (distCanvas) {
+        chartInstances['dist-chart'] = new Chart(distCanvas, {
+            type: 'bar',
+            data: {
+                labels: sortedDist.map(r => r.bucket),
+                datasets: [{
+                    data: sortedDist.map(r => Number(r.count)),
+                    backgroundColor: [
+                        '#3fb95044', '#3fb95044',
+                        '#d2992244',
+                        '#f8514944', '#f8514944',
+                    ],
+                    borderColor: [
+                        '#3fb950', '#3fb950',
+                        '#d29922',
+                        '#f85149', '#f85149',
+                    ],
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => `${ctx.parsed.y} page loads`
+                        }
+                    }
+                },
+                scales: {
+                    x: { ticks: { color: '#7d8590' }, grid: { color: '#21262d' } },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: '#7d8590' },
+                        grid: { color: '#21262d' },
+                    },
+                },
+            },
+        });
+    }
+
+    // ── Per-page Table ────────────────────────────────────
     const tableEl = document.getElementById('perf-table');
     if (byPage.length === 0) {
         tableEl.innerHTML = '<div class="empty-state">No performance data yet</div>';
-        return;
-    }
-    const table = document.createElement('table');
-    table.className = 'data-table';
-    table.innerHTML = `
-    <thead>
-      <tr>
-        <th>URL</th>
-        <th>Load (ms)</th>
-        <th>TTFB (ms)</th>
-        <th>LCP (ms)</th>
-        <th>CLS</th>
-        <th>Samples</th>
-      </tr>
-    </thead>
-  `;
-    const tbody = document.createElement('tbody');
-    byPage.forEach((r) => {
-        const tr = document.createElement('tr');
-        if (Number(r.avg_load_ms) > 3000) tr.classList.add('row-slow');
-        const fields = [
-            { val: r.url, isUrl: true },
-            { val: r.avg_load_ms },
-            { val: r.avg_ttfb_ms },
-            { val: r.avg_lcp },
-            { val: Number(r.avg_cls).toFixed(3) },
-            { val: r.samples },
-        ];
-        fields.forEach((f) => {
-            const td = document.createElement('td');
-            td.textContent = f.val ?? '—';
-            tr.appendChild(td);
+    } else {
+        const wrap  = document.createElement('div');
+        wrap.className = 'table-wrap';
+        const table = document.createElement('table');
+        table.className = 'data-table';
+        table.innerHTML = `
+            <thead>
+                <tr>
+                    <th>URL</th>
+                    <th>Load (ms)</th>
+                    <th>TTFB (ms)</th>
+                    <th>LCP (ms)</th>
+                    <th>CLS</th>
+                    <th>INP (ms)</th>
+                    <th>Samples</th>
+                </tr>
+            </thead>
+        `;
+        const tbody = document.createElement('tbody');
+        byPage.forEach(r => {
+            const tr = document.createElement('tr');
+            if (Number(r.avg_load_ms) > 3000) tr.classList.add('row-slow');
+            [
+                r.url.replace('https://test.jgamba.site', '') || '/',
+                r.avg_load_ms  ?? '—',
+                r.avg_ttfb_ms  ?? '—',
+                r.avg_lcp      ?? '—',
+                r.avg_cls != null ? Number(r.avg_cls).toFixed(3) : '—',
+                r.avg_inp      ?? '—',
+                r.samples,
+            ].forEach(val => {
+                const td = document.createElement('td');
+                td.textContent = val;
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
         });
-        tbody.appendChild(tr);
-    });
-    table.appendChild(tbody);
-    const wrap = document.createElement('div');
-    wrap.className = 'table-wrap';
-    wrap.appendChild(table);
-    tableEl.appendChild(wrap);
+        table.appendChild(tbody);
+        wrap.appendChild(table);
+        tableEl.appendChild(wrap);
+    }
 }
 
 // View: Errors

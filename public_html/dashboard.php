@@ -672,6 +672,12 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       }
     }
 
+    @media (max-width: 900px) {
+      .chart-row-3 {
+        grid-template-columns: 1fr !important;
+      }
+    }
+
     /* ── Responsive: Tablets ───────────────────────────── */
     @media (max-width: 768px) {
       .shell {
@@ -751,6 +757,10 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       }
 
       .chart-row {
+        grid-template-columns: 1fr !important;
+      }
+
+      .chart-row-3 {
         grid-template-columns: 1fr !important;
       }
     }
