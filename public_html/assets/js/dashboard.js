@@ -285,8 +285,8 @@ async function renderOverview(start, end) {
     ]);
 
     // TEMP DEBUG
-    console.log('summary:', summary);
-    console.log('pv:', pv);
+    console.log('summary raw:', JSON.stringify(summary));
+    console.log('pv raw:', JSON.stringify(pv));
 
     if (!summary || !pv) return;
 
