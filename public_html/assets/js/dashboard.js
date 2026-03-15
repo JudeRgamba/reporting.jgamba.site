@@ -1,25 +1,26 @@
 /* dashboard.js — SPA router + all views */
 'use strict';
 
-// ─── API Fetch ────────────────────────────────────────────────────────────────
+// API Fetch 
 async function apiFetch(url) {
-  try {
-    const res = await fetch(url, { credentials: 'include' });
-    if (res.status === 401) {
-      window.location.href = '/login.php';
-      return null;
+  const res = await fetch(url, {
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-User-Role':     window.SESSION_ROLE     || 'viewer',
+      'X-User-Sections': JSON.stringify(window.SESSION_SECTIONS || []),
+      'X-User-Id':       String(window.SESSION_USER_ID || '')
     }
-    if (!res.ok) throw new Error('API error: ' + res.status);
-    const json = await res.json();
-    return json.data ?? json;
-  } catch (err) {
-    document.getElementById('content').innerHTML =
-      '<div class="error-state">Failed to load data: ' + err.message + '</div>';
+  });
+  if (res.status === 401) { window.location.href = '/login.php'; return null; }
+  if (res.status === 403) {
+    showError('You do not have permission to view this section.');
     return null;
   }
+  return res.json();
 }
 
-// ─── Date Range ───────────────────────────────────────────────────────────────
+// Date Range 
 function getDateRange() {
   return {
     start: document.getElementById('date-start').value,
@@ -37,7 +38,7 @@ function initDatePicker() {
   document.getElementById('date-end').addEventListener('change',   route);
 }
 
-// ─── Loading Skeleton ─────────────────────────────────────────────────────────
+// Loading Skeleton 
 function showLoading() {
   document.getElementById('content').innerHTML = `
     <div class="skeleton-cards">
@@ -51,37 +52,48 @@ function showLoading() {
   `;
 }
 
-// ─── Router ───────────────────────────────────────────────────────────────────
+// Router
 function route() {
   const hash = window.location.hash || '#/overview';
-  const path = hash.replace('#', '').split('?')[0];
-  const { start, end } = getDateRange();
+  const path = hash.replace('#', '');
 
-  // Highlight active nav link
-  document.querySelectorAll('.nav-link').forEach(a => {
-    a.classList.toggle('active', a.getAttribute('href') === '#' + path);
-  });
-
-  // Close mobile sidebar on nav
-  document.getElementById('sidebar').classList.remove('open');
+  // Viewers always land on briefing
+  if (window.SESSION_ROLE === 'viewer' && path !== '/reports') {
+    window.location.hash = '#/reports';
+    return;
+  }
 
   switch (path) {
-    case '/overview':    renderOverview(start, end);    break;
-    case '/performance': renderPerformance(start, end); break;
-    case '/errors':      renderErrors(start, end);      break;
-    case '/admin': 
-        if (window.SESSION_USER_ROLE === 'viewer') {
-            window.location.hash = '#/overview';
-            return;
-        }      
-        renderAdmin();                 
-        break;
-    case '/rawdata': renderRawData(); break;
-    default:             renderOverview(start, end);
+    case '/overview':
+      if (!canAccess('overview')) { showError('You are not assigned to the Overview section.'); return; }
+      renderOverview();
+      break;
+    case '/performance':
+      if (!canAccess('performance')) { showError('You are not assigned to the Performance section.'); return; }
+      renderPerformance();
+      break;
+    case '/errors':
+      if (!canAccess('errors')) { showError('You are not assigned to the Errors section.'); return; }
+      renderErrors();
+      break;
+    case '/rawdata':
+      if (!canAccess('rawdata')) { showError('You are not assigned to the Raw Data section.'); return; }
+      renderRawData();
+      break;
+    case '/reports':
+      renderReports();
+      break;
+    case '/admin':
+      if (window.SESSION_ROLE !== 'super_admin') { showError('Super admin access required.'); return; }
+      renderAdmin();
+      break;
+    default:
+      if (window.SESSION_ROLE === 'viewer') renderReports();
+      else renderOverview();
   }
 }
 
-// ─── Charts.js Line Chart ───────────────────────────────────────────────────────
+// Charts.js Line Chart 
 // Store chart instances so we can destroy them before redrawing
 const chartInstances = {};
 
@@ -185,7 +197,7 @@ function drawBarChart(canvasId, labels, values, colors) {
   });
 }
 
-// ─── Vitals helpers ───────────────────────────────────────────────────────────
+//  Vitals helpers 
 function vitalColor(metric, value) {
   const t = { lcp: [2500, 4000], cls: [0.1, 0.25], inp: [200, 500] }[metric];
   if (!t || value == null) return '#7d8590';
@@ -202,7 +214,29 @@ function vitalLabel(metric, value) {
   return 'Poor';
 }
 
-// ─── View: Overview ───────────────────────────────────────────────────────────
+// Access Helper Functions
+function canAccess(section) {
+  if (window.SESSION_ROLE === 'super_admin') return true;
+  if (window.SESSION_ROLE === 'analyst') {
+    return (window.SESSION_SECTIONS || []).includes(section);
+  }
+  // viewers can only access reports/briefing
+  return section === 'reports';
+}
+
+function showError(msg) {
+  const content = document.getElementById('content');
+  content.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:center;height:300px;">
+      <div style="text-align:center;color:var(--text-dim);">
+        <div style="font-size:48px;margin-bottom:16px;">🔒</div>
+        <div style="font-size:18px;margin-bottom:8px;">Access Restricted</div>
+        <div style="font-size:14px;">${msg}</div>
+      </div>
+    </div>`;
+}
+
+// View: Overview 
 async function renderOverview(start, end) {
   showLoading();
   const [summary, pv] = await Promise.all([
@@ -276,7 +310,7 @@ async function renderOverview(start, end) {
   topEl.appendChild(table);
 }
 
-// ─── View: Performance ────────────────────────────────────────────────────────
+// View: Performance 
 async function renderPerformance(start, end) {
   showLoading();
   const data = await apiFetch('/api/performance?start=' + start + '&end=' + end);
@@ -383,7 +417,7 @@ async function renderPerformance(start, end) {
   tableEl.appendChild(table);
 }
 
-// ─── View: Errors ─────────────────────────────────────────────────────────────
+// View: Errors
 async function renderErrors(start, end) {
   showLoading();
   const data = await apiFetch('/api/errors?start=' + start + '&end=' + end);
@@ -467,7 +501,7 @@ async function renderErrors(start, end) {
   tableEl.appendChild(table);
 }
 
-// ─── View: Raw Data ───────────────────────────────────────────────────────────
+// View: Raw Data 
 async function renderRawData() {
   showLoading();
   const data = await apiFetch('/api/events');
@@ -561,7 +595,7 @@ async function renderRawData() {
   });
 }
 
-// ─── View: Admin ──────────────────────────────────────────────────────────────
+// View: Admin 
 async function renderAdmin() {
   showLoading();
   const users = await apiFetch('/users-admin.php');
@@ -714,7 +748,7 @@ function renderUsersTable(users) {
   el.appendChild(table);
 }
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
+// Init 
 function init() {
   initDatePicker();
 
