@@ -1777,59 +1777,58 @@ function makeFilterableTable(containerId, columns, rows) {
 
     // ── Event listeners ───────────────────────────────────
     // Search input
-    el.querySelector(`${containerId}-search`)
-        ?.addEventListener('input', e => {
-            searchVal = e.target.value;
-            applyFilters();
-        });
-
-    // Column selector
-    el.querySelector(`${containerId}-col`)
-        ?.addEventListener('change', e => {
-            colFilter = e.target.value;
-            applyFilters();
-        });
-
-    // Clear button
-    el.querySelector(`${containerId}-clear`)
-        ?.addEventListener('click', () => {
-            searchVal = '';
-            colFilter = '';
-            const searchEl = document.getElementById(`${containerId}-search`);
-            const colEl    = document.getElementById(`${containerId}-col`);
-            if (searchEl) searchEl.value = '';
-            if (colEl)    colEl.value    = '';
-            applyFilters();
-        });
-
-    // Column header sort
-    el.querySelector(`${containerId}-table`)
-        ?.querySelectorAll('th[data-sort]')
-        .forEach(th => {
-            th.addEventListener('click', () => {
-                const col = th.dataset.sort;
-                if (sortCol === col) {
-                    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-                } else {
-                    sortCol = col;
-                    sortDir = 'asc';
-                }
-                // Update sort icons
-                el.querySelectorAll('.sort-icon').forEach(icon => {
-                    icon.textContent = '↕';
-                    icon.style.color = 'var(--text-dim)';
-                });
-                const icon = th.querySelector('.sort-icon');
-                if (icon) {
-                    icon.textContent = sortDir === 'asc' ? '↑' : '↓';
-                    icon.style.color = 'var(--accent)';
-                }
+    // Replace the event listeners section with this
+    setTimeout(() => {
+        el.querySelector(`#${containerId}-search`)
+            ?.addEventListener('input', e => {
+                searchVal = e.target.value;
                 applyFilters();
             });
-        });
 
-    // Initial render
-    renderRows();
+        el.querySelector(`#${containerId}-col`)
+            ?.addEventListener('change', e => {
+                colFilter = e.target.value;
+                applyFilters();
+            });
+
+        el.querySelector(`#${containerId}-clear`)
+            ?.addEventListener('click', () => {
+                searchVal = '';
+                colFilter = '';
+                const searchEl = el.querySelector(`#${containerId}-search`);
+                const colEl    = el.querySelector(`#${containerId}-col`);
+                if (searchEl) searchEl.value = '';
+                if (colEl)    colEl.value    = '';
+                applyFilters();
+            });
+
+        el.querySelector(`#${containerId}-table`)
+            ?.querySelectorAll('th[data-sort]')
+            .forEach(th => {
+                th.addEventListener('click', () => {
+                    const col = th.dataset.sort;
+                    if (sortCol === col) {
+                        sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        sortCol = col;
+                        sortDir = 'asc';
+                    }
+                    el.querySelectorAll('.sort-icon').forEach(icon => {
+                        icon.textContent = '↕';
+                        icon.style.color = 'var(--text-dim)';
+                    });
+                    const icon = th.querySelector('.sort-icon');
+                    if (icon) {
+                        icon.textContent = sortDir === 'asc' ? '↑' : '↓';
+                        icon.style.color = 'var(--accent)';
+                    }
+                    applyFilters();
+                });
+            });
+
+        // Initial render inside setTimeout too
+        renderRows();
+    }, 0);
 }
 
 // Comments Panel
