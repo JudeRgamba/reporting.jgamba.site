@@ -185,6 +185,8 @@ function drawLineChart(canvasId, data, xKey, yKey, color) {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: 2.5,
             plugins: {
                 legend: { display: false },
             },
@@ -316,7 +318,7 @@ async function renderOverview(start, end) {
     <div class="cards-grid" id="cards"></div>
     <div class="panel">
       <div class="panel-header">Pageviews Over Time</div>
-      <div class="panel-body">
+      <div class="panel-body" style="position:relative;width:100%;min-height:200px;">
         <canvas id="pv-chart"></canvas>
       </div>
     </div>
@@ -408,7 +410,7 @@ async function renderPerformance(start, end) {
     <div class="vitals-grid" id="vitals"></div>
     <div class="panel">
         <div class="panel-header">Web Vitals Comparison</div>
-        <div class="panel-body">
+        <div class="panel-body" style="position:relative;width:100%;min-height:200px;">
             <canvas id="vitals-chart"></canvas>
         </div>
     </div>
@@ -512,7 +514,7 @@ async function renderErrors(start, end) {
     </div>
     <div class="panel">
       <div class="panel-header">Error Trend</div>
-      <div class="panel-body">
+      <div class="panel-body" style="position:relative;width:100%;min-height:200px;">
         <canvas id="err-chart"></canvas>
       </div>
     </div>

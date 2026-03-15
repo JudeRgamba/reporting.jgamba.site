@@ -225,6 +225,7 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       overflow-x: hidden;
       min-height: calc(100vh - var(--header-h));
       max-width: 100%;
+      box-sizing: border-box;
     }
 
     /* ── Shared UI Components ──────────────────────────── */
@@ -317,9 +318,12 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       -webkit-overflow-scrolling: touch;
     }
 
+    .table-wrap .data-table {
+      min-width: 480px;
+    }
+
     .data-table {
       width: 100%;
-      min-width: 480px;
       border-collapse: collapse;
       font-family: var(--font-mono);
       font-size: 12px;
@@ -348,6 +352,15 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
 
     .data-table tr:hover td {
       background: var(--surface2);
+    }
+
+    .shell * {
+      max-width: 100%;
+    }
+
+    /* Exception for tables inside scroll wrappers */
+    .table-wrap * {
+      max-width: none;
     }
 
     /* ── Vitals Cards ──────────────────────────────────── */
@@ -697,6 +710,10 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
         padding: 12px;
       }
 
+      .panel-body canvas {
+        max-height: 200px;
+      }
+
       .cards-grid {
         grid-template-columns: 1fr;
         gap: 10px;
@@ -748,8 +765,27 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       }
 
       .header {
-        padding: 0 12px;
-        gap: 8px;
+        flex-wrap: wrap;
+        padding: 8px 12px;
+        gap: 6px;
+        height: auto;
+        min-height: var(--header-h);
+      }
+
+      .header-logo {
+        font-size: 12px;
+      }
+
+      .header-divider {
+        display: none;
+      }
+
+      .header-user {
+        display: none;
+      }
+
+      .header-spacer {
+        display: none;
       }
 
       .header-user {
@@ -757,8 +793,15 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       }
 
       .date-range input[type="date"] {
+        flex: 1;
         font-size: 11px;
-        padding: 3px 6px;
+        padding: 3px 4px;
+      }
+
+      .date-range {
+        width: 100%;
+        order: 3;
+        justify-content: space-between;
       }
 
       .form-grid {
@@ -770,6 +813,11 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       .btn-danger {
         font-size: 12px;
         padding: 6px 10px;
+      }
+
+      .btn-logout {
+        font-size: 10px;
+        padding: 4px 8px;
       }
     }
 
