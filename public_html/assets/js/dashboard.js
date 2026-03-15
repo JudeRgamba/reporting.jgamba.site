@@ -317,10 +317,11 @@ function showError(msg) {
 async function renderOverview(start, end) {
     showLoading();
 
-    const [summary, pv, sessionOverTime] = await Promise.all([
+    const [summary, pv, sessionOverTime, eventTypesRes] = await Promise.all([
         apiFetch(`/api/dashboard?start=${start}&end=${end}`),
         apiFetch(`/api/pageviews?start=${start}&end=${end}`),
         apiFetch(`/api/sessions-over-time?start=${start}&end=${end}`),
+        apiFetch(`/api/event-types?start=${start}&end=${end}`),
     ]);
 
     if (!summary) return;
@@ -331,15 +332,7 @@ async function renderOverview(start, end) {
     const sotData  = sessionOverTime?.data || [];
 
     // Event type breakdown from raw events
-    const eventsRes = await apiFetch('/api/events');
-    const rawEvents = eventsRes?.data || [];
-    const eventTypeCounts = rawEvents.reduce((acc, e) => {
-        acc[e.event_type] = (acc[e.event_type] || 0) + 1;
-        return acc;
-    }, {});
-    const eventTypeData = Object.entries(eventTypeCounts)
-        .map(([type, count]) => ({ type, count }))
-        .sort((a, b) => b.count - a.count);
+    const eventTypeData = eventTypesRes?.data || [];
 
     // Comments panel
     const commentsHTML = await renderCommentsPanel('overview', start, end);
