@@ -217,10 +217,27 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       flex-shrink: 0;
     }
 
+    #sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      top: var(--header-h);
+      z-index: 199;
+      /* just below sidebar */
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+    }
+
+    #sidebar-overlay.visible {
+      display: block;
+    }
+
     /* ── Content ───────────────────────────────────────── */
     .content {
       grid-area: content;
       padding: 28px 32px;
+      padding-top: 36px;
       overflow-y: auto;
       overflow-x: hidden;
       min-height: calc(100vh - var(--header-h));
@@ -655,18 +672,34 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       }
 
       .sidebar {
-        display: none;
+        display: block;
+        /* ← always in DOM, never display:none */
         position: fixed;
         top: var(--header-h);
         left: 0;
         width: 240px;
         height: calc(100vh - var(--header-h));
+        /* ← full remaining height */
         z-index: 200;
         box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
+        background: rgba(13, 17, 23, 0.92);
+        /* ← translucent */
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+
+        /* Slide animation */
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+
+        /* Remove display:none toggle — use transform instead */
+        visibility: hidden;
+        transition: transform 0.25s ease, visibility 0s linear 0.25s;
       }
 
       .sidebar.open {
-        display: block;
+        transform: translateX(0);
+        visibility: visible;
+        transition: transform 0.25s ease, visibility 0s linear 0s;
       }
 
       .hamburger {
@@ -892,6 +925,7 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
         <?php endif; ?>
       </nav>
     <?php endif; ?>
+    <div id="sidebar-overlay"></div>
 
     <!-- Content -->
     <main class="content" class="main">

@@ -1034,8 +1034,24 @@ function init() {
         window.location.href = '/login.php';
     });
 
+    // open sidebar and show overlay
     document.getElementById('hamburger')?.addEventListener('click', () => {
         document.getElementById('sidebar')?.classList.toggle('open');
+        document.getElementById('sidebar-overlay')?.classList.toggle('visible');
+    });
+
+    // Click outside sidebar to close it
+    document.getElementById('sidebar-overlay')?.addEventListener('click', () => {
+        document.getElementById('sidebar')?.classList.remove('open');
+        document.getElementById('sidebar-overlay')?.classList.remove('visible');
+    });
+
+    // Close sidebar when a nav link is clicked on mobile
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', () => {
+            document.getElementById('sidebar')?.classList.remove('open');
+            document.getElementById('sidebar-overlay')?.classList.remove('visible');
+        });
     });
 
     window.addEventListener('hashchange', route);
