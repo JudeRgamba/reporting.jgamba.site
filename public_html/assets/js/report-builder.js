@@ -43,7 +43,7 @@ async function openReportBuilder(existingReport) {
         canSee('overview')     ? apiFetch(`/api/pageviews?start=${start}&end=${end}`)   : null,
         canSee('performance')  ? apiFetch(`/api/performance?start=${start}&end=${end}`) : null,
         canSee('errors')       ? apiFetch(`/api/errors?start=${start}&end=${end}`)      : null,
-        fetch('/api/users', {
+        fetch('/api/viewers', {
         credentials: 'include',
         headers: {
             'Content-Type':    'application/json',
