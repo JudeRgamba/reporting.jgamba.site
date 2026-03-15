@@ -376,48 +376,24 @@ async function renderBehavior(start, end) {
     }
 
     // ── Scroll Depth Table ───────────────────────────────
-    const scrollEl = document.getElementById('scroll-table');
-    if (!scroll || scroll.length === 0) {
-        scrollEl.innerHTML = '<div class="empty-state">No scroll depth data recorded yet</div>';
-    } else {
-        const wrap = document.createElement('div');
-        wrap.className = 'table-wrap';
-        const table = document.createElement('table');
-        table.className = 'data-table';
-        table.innerHTML = `
-            <thead>
-                <tr>
-                    <th>Page</th>
-                    <th>Sessions</th>
-                    <th>25%</th>
-                    <th>50%</th>
-                    <th>75%</th>
-                    <th>100%</th>
-                </tr>
-            </thead>
-        `;
-        const tbody = document.createElement('tbody');
-        scroll.forEach(r => {
-            const tr = document.createElement('tr');
-            const pct = n => r.total_sessions > 0
-                ? Math.round((n / r.total_sessions) * 100) + '%'
+    makeFilterableTable('scroll-table', [
+        { key: 'url',           label: 'Page',
+        render: (td, val) => {
+            td.textContent = val
+                ? val.replace('https://test.jgamba.site', '') || '/'
                 : '—';
-            [
-                r.url.replace('https://test.jgamba.site', '') || '/',
-                r.total_sessions,
-                pct(r.reached_25),
-                pct(r.reached_50),
-                pct(r.reached_75),
-                pct(r.reached_100),
-            ].forEach(val => {
-                const td = document.createElement('td');
-                td.textContent = val;
-                tr.appendChild(td);
-            });
-            tbody.appendChild(tr);
-        });
-        table.appendChild(tbody);
-        wrap.appendChild(table);
-        scrollEl.appendChild(wrap);
-    }
+        }
+        },
+        { key: 'total_sessions', label: 'Sessions',  mono: true },
+        { key: 'pct_25',         label: '25%',       mono: true },
+        { key: 'pct_50',         label: '50%',       mono: true },
+        { key: 'pct_75',         label: '75%',       mono: true },
+        { key: 'pct_100',        label: '100%',      mono: true },
+    ], scroll.map(r => ({
+        ...r,
+        pct_25:  r.total_sessions > 0 ? Math.round((r.reached_25  / r.total_sessions) * 100) + '%' : '—',
+        pct_50:  r.total_sessions > 0 ? Math.round((r.reached_50  / r.total_sessions) * 100) + '%' : '—',
+        pct_75:  r.total_sessions > 0 ? Math.round((r.reached_75  / r.total_sessions) * 100) + '%' : '—',
+        pct_100: r.total_sessions > 0 ? Math.round((r.reached_100 / r.total_sessions) * 100) + '%' : '—',
+    })));
 }

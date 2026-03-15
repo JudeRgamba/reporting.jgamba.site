@@ -543,30 +543,10 @@ async function renderOverview(start, end) {
     }
 
     // -- Top Pages Table 
-    const tableEl = document.getElementById('top-pages-table');
-    if (!topPages || topPages.length === 0) {
-        tableEl.innerHTML = '<div class="empty-state">No pageview data yet</div>';
-    } else {
-        const wrap  = document.createElement('div');
-        wrap.className = 'table-wrap';
-        const table = document.createElement('table');
-        table.className = 'data-table';
-        table.innerHTML = '<thead><tr><th>URL</th><th>Views</th></tr></thead>';
-        const tbody = document.createElement('tbody');
-        topPages.forEach(p => {
-            const tr    = document.createElement('tr');
-            const tdUrl = document.createElement('td');
-            tdUrl.textContent = p.url;
-            const tdViews = document.createElement('td');
-            tdViews.textContent = Number(p.views).toLocaleString();
-            tr.appendChild(tdUrl);
-            tr.appendChild(tdViews);
-            tbody.appendChild(tr);
-        });
-        table.appendChild(tbody);
-        wrap.appendChild(table);
-        tableEl.appendChild(wrap);
-    }
+    makeFilterableTable('top-pages-table', [
+    { key: 'url',   label: 'URL',   truncate: 300 },
+    { key: 'views', label: 'Views', mono: true    },
+    ], topPages);
 }
 
 // View: Performance
@@ -913,50 +893,28 @@ async function renderPerformance(start, end) {
     }
 
     // ── Per-page Table ────────────────────────────────────
-    const tableEl = document.getElementById('perf-table');
-    if (byPage.length === 0) {
-        tableEl.innerHTML = '<div class="empty-state">No performance data yet</div>';
-    } else {
-        const wrap  = document.createElement('div');
-        wrap.className = 'table-wrap';
-        const table = document.createElement('table');
-        table.className = 'data-table';
-        table.innerHTML = `
-            <thead>
-                <tr>
-                    <th>URL</th>
-                    <th>Load (ms)</th>
-                    <th>TTFB (ms)</th>
-                    <th>LCP (ms)</th>
-                    <th>CLS</th>
-                    <th>INP (ms)</th>
-                    <th>Samples</th>
-                </tr>
-            </thead>
-        `;
-        const tbody = document.createElement('tbody');
-        byPage.forEach(r => {
-            const tr = document.createElement('tr');
-            if (Number(r.avg_load_ms) > 3000) tr.classList.add('row-slow');
-            [
-                r.url.replace('https://test.jgamba.site', '') || '/',
-                r.avg_load_ms  ?? '—',
-                r.avg_ttfb_ms  ?? '—',
-                r.avg_lcp      ?? '—',
-                r.avg_cls != null ? Number(r.avg_cls).toFixed(3) : '—',
-                r.avg_inp      ?? '—',
-                r.samples,
-            ].forEach(val => {
-                const td = document.createElement('td');
-                td.textContent = val;
-                tr.appendChild(td);
-            });
-            tbody.appendChild(tr);
-        });
-        table.appendChild(tbody);
-        wrap.appendChild(table);
-        tableEl.appendChild(wrap);
-    }
+    makeFilterableTable('perf-table', [
+    { key: 'url',          label: 'URL',       truncate: 260 },
+    { key: 'avg_load_ms',  label: 'Load (ms)', mono: true,
+      render: (td, val, row) => {
+          td.textContent = val ?? '—';
+          td.style.fontFamily = 'var(--font-mono)';
+          if (Number(val) > 3000) td.style.color = 'var(--danger)';
+          else if (Number(val) > 1500) td.style.color = 'var(--warn)';
+          else if (val) td.style.color = 'var(--accent2)';
+      }
+    },
+    { key: 'avg_ttfb_ms',  label: 'TTFB (ms)', mono: true },
+    { key: 'avg_lcp',      label: 'LCP (ms)',  mono: true },
+    { key: 'avg_cls',      label: 'CLS',       mono: true,
+      render: (td, val) => {
+          td.textContent = val != null ? Number(val).toFixed(3) : '—';
+          td.style.fontFamily = 'var(--font-mono)';
+      }
+    },
+    { key: 'avg_inp',      label: 'INP (ms)',  mono: true },
+    { key: 'samples',      label: 'Samples',   mono: true },
+    ], byPage);       
 }
 
 // View: Errors
@@ -1248,143 +1206,61 @@ async function renderErrors(start, end) {
     }
 
     // ── Detail Error Log Table ────────────────────────────
-    const detailEl = document.getElementById('err-detail-table');
-    if (!detail || detail.length === 0) {
-        detailEl.innerHTML = '<div class="empty-state">No errors recorded 🎉</div>';
-    } else {
-        const wrap  = document.createElement('div');
-        wrap.className = 'table-wrap';
-        const table = document.createElement('table');
-        table.className = 'data-table';
-        table.innerHTML = `
-            <thead>
-                <tr>
-                    <th>Time</th>
-                    <th>Type</th>
-                    <th>Element</th>
-                    <th>Page</th>
-                    <th>Detail</th>
-                    <th>Session</th>
-                </tr>
-            </thead>
-        `;
-        const tbody = document.createElement('tbody');
-        detail.forEach(r => {
-            const tr = document.createElement('tr');
-            const typeColors = {
-                'resource-error':      '#d29922',
-                'js-error':            '#f85149',
-                'unhandled-rejection': '#a371f7',
-            };
-            const tcolor = typeColors[r.error_type] || '#7d8590';
-
-            // Time
-            const tdTime = document.createElement('td');
-            tdTime.style.fontFamily = 'var(--font-mono)';
-            tdTime.style.fontSize   = '11px';
-            tdTime.textContent = String(r.server_ts).slice(0, 19);
-            tr.appendChild(tdTime);
-
-            // Type badge
-            const tdType = document.createElement('td');
-            const badge  = document.createElement('span');
-            badge.className = 'badge';
-            badge.textContent = r.error_type;
-            badge.style.background = tcolor + '22';
-            badge.style.color      = tcolor;
-            tdType.appendChild(badge);
-            tr.appendChild(tdType);
-
-            // Element
-            const tdEl = document.createElement('td');
-            tdEl.textContent = r.element_type || '—';
-            tr.appendChild(tdEl);
-
-            // Page
-            const tdPage = document.createElement('td');
-            tdPage.textContent = r.url
-                ? r.url.replace('https://test.jgamba.site', '') || '/'
-                : '—';
-            tr.appendChild(tdPage);
-
-            // Detail
-            const tdDetail = document.createElement('td');
-            tdDetail.style.maxWidth   = '200px';
-            tdDetail.style.overflow   = 'hidden';
-            tdDetail.style.textOverflow = 'ellipsis';
-            tdDetail.style.whiteSpace = 'nowrap';
-            tdDetail.textContent = r.error_detail || '—';
-            tr.appendChild(tdDetail);
-
-            // Session
-            const tdSess = document.createElement('td');
-            tdSess.style.fontFamily = 'var(--font-mono)';
-            tdSess.style.fontSize   = '11px';
-            tdSess.textContent = r.session_id
-                ? String(r.session_id).slice(0, 12) + '…'
-                : '—';
-            tr.appendChild(tdSess);
-
-            tbody.appendChild(tr);
-        });
-        table.appendChild(tbody);
-        wrap.appendChild(table);
-        detailEl.appendChild(wrap);
-    }
+    makeFilterableTable('err-detail-table', [
+    { key: 'server_ts',    label: 'Time',    mono: true,
+      render: (td, val) => {
+          td.textContent = String(val || '').slice(0, 19);
+          td.style.fontFamily = 'var(--font-mono)';
+          td.style.fontSize   = '11px';
+      }
+    },
+    { key: 'error_type',   label: 'Type',
+      render: (td, val) => {
+          const colors = {
+              'resource-error':      '#d29922',
+              'js-error':            '#f85149',
+              'unhandled-rejection': '#a371f7',
+          };
+          const c = colors[val] || '#7d8590';
+          const badge = document.createElement('span');
+          badge.className = 'badge';
+          badge.textContent = val || 'unknown';
+          badge.style.background = c + '22';
+          badge.style.color      = c;
+          td.appendChild(badge);
+      }
+    },
+    { key: 'element_type', label: 'Element', mono: true },
+    { key: 'url',          label: 'Page',    truncate: 200,
+      render: (td, val) => {
+          td.textContent = val
+              ? val.replace('https://test.jgamba.site', '') || '/'
+              : '—';
+          td.style.fontFamily = 'var(--font-mono)';
+          td.style.fontSize   = '11px';
+      }
+    },
+    { key: 'error_detail', label: 'Detail',  truncate: 200 },
+    { key: 'session_id',   label: 'Session', mono: true,
+      render: (td, val) => {
+          td.textContent = val ? String(val).slice(0, 12) + '…' : '—';
+          td.style.fontFamily = 'var(--font-mono)';
+          td.style.fontSize   = '11px';
+      }
+    },
+    ], detail);
 
     // ── Legacy Grouped by Message Table ──────────────────
-    const tableEl = document.getElementById('err-table');
-    if (!byMessage || byMessage.length === 0) {
-        tableEl.innerHTML = '<div class="empty-state">No grouped error data</div>';
-    } else {
-        const wrap  = document.createElement('div');
-        wrap.className = 'table-wrap';
-        const table = document.createElement('table');
-        table.className = 'data-table';
-        table.innerHTML = `
-            <thead>
-                <tr><th>Message</th><th>Count</th><th>Last Seen</th></tr>
-            </thead>
-        `;
-        const tbody = document.createElement('tbody');
-        byMessage.forEach(r => {
-            const tr = document.createElement('tr');
-            tr.className = 'clickable';
-
-            const tdMsg = document.createElement('td');
-            const short = String(r.error_message || '(unknown)').slice(0, 80);
-            tdMsg.textContent = short +
-                (r.error_message && r.error_message.length > 80 ? '…' : '');
-
-            const tdCount = document.createElement('td');
-            tdCount.textContent = Number(r.occurrences).toLocaleString();
-
-            const tdDate = document.createElement('td');
-            tdDate.textContent = r.last_seen || '—';
-
-            tr.appendChild(tdMsg);
-            tr.appendChild(tdCount);
-            tr.appendChild(tdDate);
-
-            const detailTr = document.createElement('tr');
-            detailTr.className = 'detail-row';
-            const detailTd = document.createElement('td');
-            detailTd.colSpan = 3;
-            detailTd.className = 'detail-cell';
-            detailTd.textContent = r.error_message || '(no message)';
-            detailTr.appendChild(detailTd);
-
-            tr.addEventListener('click', () =>
-                detailTr.classList.toggle('open')
-            );
-
-            tbody.appendChild(tr);
-            tbody.appendChild(detailTr);
-        });
-        table.appendChild(tbody);
-        wrap.appendChild(table);
-        tableEl.appendChild(wrap);
-    }
+    makeFilterableTable('err-table', [
+        { key: 'error_message', label: 'Message', truncate: 300 },
+        { key: 'occurrences',   label: 'Count',   mono: true    },
+        { key: 'last_seen',     label: 'Last Seen', mono: true  },
+        { key: 'url',           label: 'URL',     truncate: 200 },
+    ], byMessage.map(r => ({
+        ...r,
+        error_message: r.error_message || '(unknown)',
+        last_seen: r.last_seen ? String(r.last_seen).slice(0, 10) : '—',
+    })));
 
     // ── Server Log Table ──────────────────────────────────
     if (serverLogs?.recent?.length > 0) {
@@ -1459,89 +1335,63 @@ async function renderRawData() {
     const content = document.getElementById('content');
 
     content.innerHTML = `
-    <div class="page-title">Raw Event Data</div>
-    <div class="panel">
-        ${panelHeader('Last 100 Events', events, 'raw-events.csv')}
-        <div style="overflow-x:auto;">
-        <table class="data-table" id="raw-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Session</th>
-              <th>Type</th>
-              <th>URL</th>
-              <th>Timestamp</th>
-              <th>LCP</th>
-              <th>CLS</th>
-              <th>INP</th>
-              <th>Load (ms)</th>
-              <th>TTFB</th>
-            </tr>
-          </thead>
-          <tbody id="raw-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-  `;
+        <div class="page-title">Raw Event Data</div>
+        <div class="panel">
+            ${panelHeader('Last 100 Events — unprocessed from database', events, 'raw-events.csv')}
+            <div id="raw-events-container"></div>
+        </div>
+    `;
 
-    const tbody = document.getElementById('raw-tbody');
-
-    if (!events || events.length === 0) {
-        tbody.innerHTML =
-            '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text-dim)">No events found</td></tr>';
-        return;
-    }
-
-    events.forEach((e) => {
-        const tr = document.createElement('tr');
-
-        const fields = [
-            e.id,
-            e.session_id ? String(e.session_id).slice(0, 12) + '…' : '—',
-            e.url ? String(e.url).replace('https://test.jgamba.site', '') || '/' : '—',
-            e.server_ts ? String(e.server_ts).slice(0, 19) : '—',
-            e.lcp ?? '—',
-            e.cls ?? '—',
-            e.inp ?? '—',
-            e.load_event ?? '—',
-            e.ttfb ?? '—',
-        ];
-
-        // Append ID and session first
-        fields.slice(0, 2).forEach((val) => {
-            const td = document.createElement('td');
-            td.textContent = val;
-            tr.appendChild(td);
-        });
-
-        // ── Event type badge goes here (3rd column) ──
-        const typeTd = document.createElement('td');
-        const badge = document.createElement('span');
-        badge.className = 'badge';
-        badge.textContent = e.event_type;
-        const colors = {
-            pageview: '#58a6ff',
-            vitals: '#3fb950',
-            error: '#f85149',
-            click: '#d29922',
-            scroll_depth: '#a371f7',
-            scroll_final: '#a371f7',
-        };
-        const c = colors[e.event_type] || '#7d8590';
-        badge.style.background = c + '22';
-        badge.style.color = c;
-        typeTd.appendChild(badge);
-        tr.appendChild(typeTd);
-
-        // ── Remaining fields after event type ──
-        fields.slice(2).forEach((val) => {
-            const td = document.createElement('td');
-            td.textContent = val;
-            tr.appendChild(td);
-        });
-
-        tbody.appendChild(tr);
-    });
+    makeFilterableTable('raw-events-container', [
+        { key: 'id',         label: 'ID',        mono: true },
+        { key: 'session_id', label: 'Session',   mono: true,
+          render: (td, val) => {
+              td.textContent = val ? String(val).slice(0, 12) + '…' : '—';
+              td.style.fontFamily = 'var(--font-mono)';
+              td.style.fontSize   = '11px';
+          }
+        },
+        { key: 'event_type', label: 'Type',
+          render: (td, val) => {
+              const colors = {
+                  pageview:     '#58a6ff',
+                  vitals:       '#3fb950',
+                  error:        '#f85149',
+                  click:        '#d29922',
+                  scroll_depth: '#a371f7',
+                  scroll_final: '#a371f7',
+              };
+              const c = colors[val] || '#7d8590';
+              const badge = document.createElement('span');
+              badge.className        = 'badge';
+              badge.textContent      = val || '—';
+              badge.style.background = c + '22';
+              badge.style.color      = c;
+              td.appendChild(badge);
+          }
+        },
+        { key: 'url',        label: 'URL',       truncate: 200,
+          render: (td, val) => {
+              td.textContent = val
+                  ? val.replace('https://test.jgamba.site', '') || '/'
+                  : '—';
+              td.style.fontFamily = 'var(--font-mono)';
+              td.style.fontSize   = '11px';
+          }
+        },
+        { key: 'server_ts',  label: 'Timestamp', mono: true,
+          render: (td, val) => {
+              td.textContent = String(val || '').slice(0, 19);
+              td.style.fontFamily = 'var(--font-mono)';
+              td.style.fontSize   = '11px';
+          }
+        },
+        { key: 'lcp',        label: 'LCP',       mono: true },
+        { key: 'cls',        label: 'CLS',       mono: true },
+        { key: 'inp',        label: 'INP',       mono: true },
+        { key: 'load_event', label: 'Load (ms)', mono: true },
+        { key: 'ttfb',       label: 'TTFB',      mono: true },
+    ], events);
 }
 
 // View: Reports
@@ -1720,6 +1570,270 @@ function downloadCSV(filename, data) {
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+}
+
+// -- Filterable Table --
+function makeFilterableTable(containerId, columns, rows) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+
+    if (!rows || rows.length === 0) {
+        el.innerHTML = '<div class="empty-state">No data available</div>';
+        return;
+    }
+
+    const wrapperId = containerId + '-wrapper';
+    el.innerHTML = `
+        <!-- Filter bar -->
+        <div style="
+            padding:12px 16px;
+            border-bottom:1px solid var(--border);
+            display:flex;gap:10px;flex-wrap:wrap;
+            align-items:center;
+        ">
+            <!-- Global search -->
+            <div style="position:relative;flex:1;min-width:180px;">
+                <input
+                    id="${containerId}-search"
+                    type="text"
+                    placeholder="Search all columns..."
+                    style="
+                        width:100%;
+                        padding:6px 12px 6px 30px;
+                        background:var(--bg);
+                        border:1px solid var(--border2);
+                        border-radius:var(--radius);
+                        color:var(--text);
+                        font-family:var(--font-mono);
+                        font-size:12px;
+                        outline:none;
+                        transition:border-color 0.15s;
+                    "
+                    onfocus="this.style.borderColor='var(--accent)'"
+                    onblur="this.style.borderColor='var(--border2)'"
+                >
+                <span style="
+                    position:absolute;left:10px;top:50%;
+                    transform:translateY(-50%);
+                    color:var(--text-dim);font-size:12px;
+                ">⌕</span>
+            </div>
+
+            <!-- Column filter -->
+            <select
+                id="${containerId}-col"
+                style="
+                    padding:6px 10px;
+                    background:var(--bg);
+                    border:1px solid var(--border2);
+                    border-radius:var(--radius);
+                    color:var(--text);
+                    font-family:var(--font-mono);
+                    font-size:12px;
+                    outline:none;
+                    cursor:pointer;
+                "
+            >
+                <option value="">All columns</option>
+                ${columns.map(c => `
+                    <option value="${c.key}">${c.label}</option>
+                `).join('')}
+            </select>
+
+            <!-- Row count -->
+            <span id="${containerId}-count" style="
+                font-family:var(--font-mono);
+                font-size:11px;
+                color:var(--text-dim);
+                white-space:nowrap;
+            ">${rows.length} rows</span>
+
+            <!-- Clear button -->
+            <button
+                id="${containerId}-clear"
+                class="btn-secondary"
+                style="font-size:11px;padding:5px 10px;display:none;"
+            >✕ Clear</button>
+        </div>
+
+        <!-- Table -->
+        <div class="table-wrap" id="${wrapperId}">
+            <table class="data-table" id="${containerId}-table">
+                <thead>
+                    <tr>
+                        ${columns.map(c => `
+                            <th style="cursor:pointer;user-select:none;"
+                                data-sort="${c.key}"
+                                title="Click to sort by ${c.label}">
+                                ${c.label}
+                                <span class="sort-icon" data-col="${c.key}"
+                                    style="color:var(--text-dim);font-size:10px;margin-left:4px;">
+                                    ↕
+                                </span>
+                            </th>
+                        `).join('')}
+                    </tr>
+                </thead>
+                <tbody id="${containerId}-tbody"></tbody>
+            </table>
+        </div>
+    `;
+
+    // State
+    let filtered  = [...rows];
+    let sortCol   = null;
+    let sortDir   = 'asc';
+    let searchVal = '';
+    let colFilter = '';
+
+    function renderRows() {
+        const tbody = document.getElementById(`${containerId}-tbody`);
+        if (!tbody) return;
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = `
+                <tr><td colspan="${columns.length}"
+                    style="text-align:center;padding:32px;color:var(--text-dim);
+                        font-family:var(--font-mono);font-size:12px;">
+                    No results match your filter
+                </td></tr>
+            `;
+            document.getElementById(`${containerId}-count`).textContent = '0 rows';
+            return;
+        }
+
+        tbody.innerHTML = '';
+        filtered.forEach(row => {
+            const tr = document.createElement('tr');
+            columns.forEach(col => {
+                const td = document.createElement('td');
+                const val = row[col.key];
+
+                if (col.render) {
+                    // Custom renderer passed in column def
+                    col.render(td, val, row);
+                } else {
+                    td.textContent = val ?? '—';
+                    if (col.mono) {
+                        td.style.fontFamily = 'var(--font-mono)';
+                        td.style.fontSize   = '11px';
+                    }
+                    if (col.truncate) {
+                        td.style.maxWidth     = col.truncate + 'px';
+                        td.style.overflow     = 'hidden';
+                        td.style.textOverflow = 'ellipsis';
+                        td.style.whiteSpace   = 'nowrap';
+                        td.title = String(val ?? '');
+                    }
+                }
+                tr.appendChild(td);
+            });
+            // Optional row class
+            if (typeof col?.rowClass === 'function') tr.className = col.rowClass(row);
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById(`${containerId}-count`).textContent =
+            `${filtered.length} of ${rows.length} rows`;
+    }
+
+    function applyFilters() {
+        filtered = rows.filter(row => {
+            if (!searchVal) return true;
+            const search = searchVal.toLowerCase();
+            if (colFilter) {
+                // Search only in selected column
+                return String(row[colFilter] ?? '').toLowerCase().includes(search);
+            }
+            // Search all columns
+            return columns.some(c =>
+                String(row[c.key] ?? '').toLowerCase().includes(search)
+            );
+        });
+
+        if (sortCol) {
+            filtered.sort((a, b) => {
+                const va = a[sortCol] ?? '';
+                const vb = b[sortCol] ?? '';
+                const na = Number(va);
+                const nb = Number(vb);
+                // Numeric sort if both are numbers
+                if (!isNaN(na) && !isNaN(nb)) {
+                    return sortDir === 'asc' ? na - nb : nb - na;
+                }
+                // String sort
+                const sa = String(va).toLowerCase();
+                const sb = String(vb).toLowerCase();
+                return sortDir === 'asc'
+                    ? sa.localeCompare(sb)
+                    : sb.localeCompare(sa);
+            });
+        }
+
+        // Show/hide clear button
+        const clearBtn = document.getElementById(`${containerId}-clear`);
+        if (clearBtn) {
+            clearBtn.style.display = searchVal ? 'block' : 'none';
+        }
+
+        renderRows();
+    }
+
+    // ── Event listeners ───────────────────────────────────
+    // Search input
+    document.getElementById(`${containerId}-search`)
+        ?.addEventListener('input', e => {
+            searchVal = e.target.value;
+            applyFilters();
+        });
+
+    // Column selector
+    document.getElementById(`${containerId}-col`)
+        ?.addEventListener('change', e => {
+            colFilter = e.target.value;
+            applyFilters();
+        });
+
+    // Clear button
+    document.getElementById(`${containerId}-clear`)
+        ?.addEventListener('click', () => {
+            searchVal = '';
+            colFilter = '';
+            const searchEl = document.getElementById(`${containerId}-search`);
+            const colEl    = document.getElementById(`${containerId}-col`);
+            if (searchEl) searchEl.value = '';
+            if (colEl)    colEl.value    = '';
+            applyFilters();
+        });
+
+    // Column header sort
+    document.getElementById(`${containerId}-table`)
+        ?.querySelectorAll('th[data-sort]')
+        .forEach(th => {
+            th.addEventListener('click', () => {
+                const col = th.dataset.sort;
+                if (sortCol === col) {
+                    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortCol = col;
+                    sortDir = 'asc';
+                }
+                // Update sort icons
+                document.querySelectorAll('.sort-icon').forEach(icon => {
+                    icon.textContent = '↕';
+                    icon.style.color = 'var(--text-dim)';
+                });
+                const icon = th.querySelector('.sort-icon');
+                if (icon) {
+                    icon.textContent = sortDir === 'asc' ? '↑' : '↓';
+                    icon.style.color = 'var(--accent)';
+                }
+                applyFilters();
+            });
+        });
+
+    // Initial render
+    renderRows();
 }
 
 // Comments Panel
@@ -2144,74 +2258,57 @@ async function renderAdmin() {
 }
 
 function renderUsersTable(users) {
-    const el = document.getElementById('users-table');
-    if (!el) return;
-    if (!users || users.length === 0) {
-        el.innerHTML = '<div class="empty-state">No users found</div>';
-        return;
-    }
-
-    const table = document.createElement('table');
-    table.className = 'data-table';
-    table.innerHTML = `
-    <thead>
-      <tr>
-        <th>Username</th>
-        <th>Email</th>
-        <th>Display Name</th>
-        <th>Role</th>
-        <th>Last Login</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-  `;
-    const tbody = document.createElement('tbody');
-    users.forEach((u) => {
-        const tr = document.createElement('tr');
-
-        [
-            u.username,
-            u.email,
-            u.display_name || '—',
-            u.role,
-            u.last_login ? String(u.last_login).slice(0, 10) : 'Never',
-        ].forEach((val) => {
-            const td = document.createElement('td');
-            td.textContent = val;
-            tr.appendChild(td);
-        });
-
-        const actionsTd = document.createElement('td');
-        const delBtn = document.createElement('button');
-        delBtn.className = 'btn btn-danger';
-        delBtn.textContent = 'Delete';
-        delBtn.addEventListener('click', async () => {
-            if (!confirm('Delete user ' + u.username + '?')) return;
-            const res = await fetch(
-                '/users-admin.php?id=' + u.id + '&self=' + window.SESSION_USER_ID,
-                {
-                    method: 'DELETE',
-                    credentials: 'include',
-                }
-            );
-            const data = await res.json();
-            if (data.success) {
-                const updated = await apiFetch('/users-admin.php');
-                if (updated) renderUsersTable(updated.data || []);
-            } else {
-                alert(data.error || 'Could not delete user.');
-            }
-        });
-        actionsTd.appendChild(delBtn);
-        tr.appendChild(actionsTd);
-        tbody.appendChild(tr);
-    });
-    table.appendChild(tbody);
-    el.innerHTML = '';
-    const wrap = document.createElement('div');
-    wrap.className = 'table-wrap';
-    wrap.appendChild(table);
-    el.appendChild(wrap);
+    makeFilterableTable('users-table', [
+        { key: 'username',     label: 'Username'     },
+        { key: 'email',        label: 'Email'        },
+        { key: 'display_name', label: 'Display Name' },
+        { key: 'role',         label: 'Role',
+          render: (td, val) => {
+              const colors = {
+                  super_admin: '#f85149',
+                  analyst:     '#58a6ff',
+                  viewer:      '#7d8590',
+              };
+              const c = colors[val] || '#7d8590';
+              const badge = document.createElement('span');
+              badge.className   = 'badge';
+              badge.textContent = val || '—';
+              badge.style.background = c + '22';
+              badge.style.color      = c;
+              td.appendChild(badge);
+          }
+        },
+        { key: 'last_login', label: 'Last Login', mono: true,
+          render: (td, val) => {
+              td.textContent = val ? String(val).slice(0, 10) : 'Never';
+              td.style.fontFamily = 'var(--font-mono)';
+              td.style.fontSize   = '11px';
+          }
+        },
+        { key: 'actions', label: 'Actions',
+          render: (td, val, row) => {
+              const delBtn = document.createElement('button');
+              delBtn.className   = 'btn btn-danger';
+              delBtn.textContent = 'Delete';
+              delBtn.style.fontSize = '12px';
+              delBtn.addEventListener('click', async () => {
+                  if (!confirm('Delete user ' + row.username + '?')) return;
+                  const res = await fetch(
+                      '/users-admin.php?id=' + row.id + '&self=' + window.SESSION_USER_ID,
+                      { method: 'DELETE', credentials: 'include' }
+                  );
+                  const data = await res.json();
+                  if (data.success) {
+                      const updated = await apiFetch('/users-admin.php');
+                      if (updated) renderUsersTable(updated.data || []);
+                  } else {
+                      alert(data.error || 'Could not delete user.');
+                  }
+              });
+              td.appendChild(delBtn);
+          }
+        },
+    ], users.map(u => ({ ...u, actions: null })));
 }
 
 // Init
