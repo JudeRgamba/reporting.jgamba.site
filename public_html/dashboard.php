@@ -640,6 +640,16 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
         display: none;
       }
     }
+
+    /* Viewer gets full width — no sidebar in grid */
+    <?php if ($_SESSION['role'] === 'viewer'): ?>.shell {
+      grid-template-columns: 1fr !important;
+      grid-template-areas:
+        "header"
+        "content" !important;
+    }
+
+    <?php endif; ?>
   </style>
 </head>
 
@@ -665,39 +675,34 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
     </header>
 
     <!-- Sidebar -->
-    <nav class="sidebar" id="sidbar">
-      <?php if ($_SESSION['role'] !== 'viewer'): ?>
-
-          <?php if (in_array('overview', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
-            <a class="nav-link" href="#/overview">
-              <span class="nav-icon">◈</span> Overview
-            </a>
-          <?php endif; ?>
-
-          <?php if (in_array('performance', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
-            <a class="nav-link" href="#/performance">
-              <span class="nav-icon">◎</span> Performance
-            </a>
-          <?php endif; ?>
-
-          <?php if (in_array('errors', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
-            <a class="nav-link" href="#/errors">
-              <span class="nav-icon">⚠</span> Errors
-            </a>
-          <?php endif; ?>
-
-          <?php if (in_array('rawdata', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
-            <a class="nav-link" href="#/rawdata">
-              <span class="nav-icon">◫</span> Raw Data
-            </a>
-          <?php endif; ?>
-
+    <?php if ($_SESSION['role'] !== 'viewer'): ?>
+      <nav class="sidebar" id="sidebar">
+        <?php if (in_array('overview', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
+          <a class="nav-link" href="#/overview">
+            <span class="nav-icon">◈</span> Overview
+          </a>
         <?php endif; ?>
 
-        <!-- Everyone gets reports/briefing -->
+        <?php if (in_array('performance', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
+          <a class="nav-link" href="#/performance">
+            <span class="nav-icon">◎</span> Performance
+          </a>
+        <?php endif; ?>
+
+        <?php if (in_array('errors', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
+          <a class="nav-link" href="#/errors">
+            <span class="nav-icon">⚠</span> Errors
+          </a>
+        <?php endif; ?>
+
+        <?php if (in_array('rawdata', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
+          <a class="nav-link" href="#/rawdata">
+            <span class="nav-icon">◫</span> Raw Data
+          </a>
+        <?php endif; ?>
+
         <a class="nav-link" href="#/reports">
-          <span class="nav-icon">📋</span>
-          <?= $_SESSION['role'] === 'viewer' ? 'Briefings' : 'Reports' ?>
+          <span class="nav-icon">📋</span> Reports
         </a>
 
         <?php if ($_SESSION['role'] === 'super_admin'): ?>
@@ -709,20 +714,20 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
     <?php endif; ?>
 
     <!-- Content -->
-    <main class="<?= $_SESSION['role'] === 'viewer' ? 'viewer-layout' : 'main' ?>">
+    <main class="main">
       <div id="content"></div>
     </main>
 
   </div>
-  <script src="assets/js/dashboard.js"></script>
-  <script src="assets/js/report-builder.js"></script>
-  <script src="assets/js/report-briefing.js"></script>
   <script>
     window.SESSION_USER_ID = <?= (int)$_SESSION['user_id'] ?>;
     window.SESSION_ROLE = <?= json_encode($_SESSION['role'] ?? 'viewer') ?>;
     window.SESSION_SECTIONS = <?= json_encode($_SESSION['sections'] ?? []) ?>;
     window.SESSION_NAME = <?= json_encode($_SESSION['display_name'] ?? '') ?>;
   </script>
+  <script src="assets/js/dashboard.js"></script>
+  <script src="assets/js/report-builder.js"></script>
+  <script src="assets/js/report-briefing.js"></script>
 </body>
 
 </html>

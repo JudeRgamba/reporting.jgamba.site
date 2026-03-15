@@ -5,7 +5,7 @@
 async function apiFetch(url) {
     const res = await fetch(url, {
         credentials: 'include',
-        cach: 'no-store', // prevents caching data stored
+        cache: 'no-store', // prevents caching data stored
         headers: {
             'Content-Type': 'application/json',
             'X-User-Role': window.SESSION_ROLE || 'viewer',
@@ -1020,7 +1020,7 @@ function init() {
         window.location.href = '/login.php';
     });
 
-    document.getElementById('hamburger').addEventListener('click', () => {
+    document.getElementById('hamburger')?.addEventListener('click', () => {
         document.getElementById('sidebar')?.classList.toggle('open');
     });
 
