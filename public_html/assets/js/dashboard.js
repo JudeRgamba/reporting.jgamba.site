@@ -1728,9 +1728,6 @@ function makeFilterableTable(containerId, columns, rows) {
                 }
                 tr.appendChild(td);
             });
-            // Optional row class
-            if (typeof col?.rowClass === 'function') tr.className = col.rowClass(row);
-            tbody.appendChild(tr);
         });
 
         document.getElementById(`${containerId}-count`).textContent =

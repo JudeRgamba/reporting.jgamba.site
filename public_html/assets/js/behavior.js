@@ -14,6 +14,7 @@ async function renderBehavior(start, end) {
             apiFetch(`/api/behavior/devices?start=${start}&end=${end}`),
             apiFetch(`/api/behavior/session-lengths?start=${start}&end=${end}`),
         ]);
+    const commentsHTML = await renderCommentsPanel('behavior', start, end);
 
     const bounce   = bounceData?.data   || [];
     const pages    = pagesData?.data    || [];
