@@ -284,11 +284,11 @@ async function renderOverview(start, end) {
         apiFetch('/api/pageviews?start=' + start + '&end=' + end),
     ]);
 
-    // TEMP DEBUG
-    console.log('summary raw:', JSON.stringify(summary));
-    console.log('pv raw:', JSON.stringify(pv));
-
     if (!summary || !pv) return;
+
+    const s = summary.data;
+    const byDay = pv.data.byDay || [];
+    const topPages = pv.data.topPages || [];
 
     const content = document.getElementById('content');
     content.innerHTML = `
@@ -308,10 +308,10 @@ async function renderOverview(start, end) {
 
     // Cards
     const cards = [
-        { label: 'Pageviews', value: Number(summary.total_pageviews || 0).toLocaleString() },
-        { label: 'Sessions', value: Number(summary.total_sessions || 0).toLocaleString() },
-        { label: 'Avg Load', value: Math.round(summary.avg_load_time_ms || 0) + ' ms' },
-        { label: 'JS Errors', value: Number(summary.total_errors || 0).toLocaleString() },
+        { label: 'Pageviews', value: Number(s.total_pageviews || 0).toLocaleString() },
+        { label: 'Sessions', value: Number(s.total_sessions || 0).toLocaleString() },
+        { label: 'Avg Load', value: Math.round(s.avg_load_time_ms || 0) + ' ms' },
+        { label: 'JS Errors', value: Number(s.total_errors || 0).toLocaleString() },
     ];
     const cardsEl = document.getElementById('cards');
     cards.forEach((c) => {
@@ -329,11 +329,11 @@ async function renderOverview(start, end) {
     });
 
     // Chart
-    drawLineChart('pv-chart', pv.byDay, 'day', 'views', '#58a6ff');
+    drawLineChart('pv-chart', byDay, 'day', 'views', '#58a6ff');
 
     // Top pages table
     const topEl = document.getElementById('top-pages');
-    if (!pv.topPages || pv.topPages.length === 0) {
+    if (topPages.length === 0) {
         topEl.innerHTML = '<div class="empty-state">No pageview data yet</div>';
         return;
     }
@@ -341,7 +341,7 @@ async function renderOverview(start, end) {
     table.className = 'data-table';
     table.innerHTML = '<thead><tr><th>URL</th><th>Views</th></tr></thead>';
     const tbody = document.createElement('tbody');
-    pv.topPages.forEach((p) => {
+    topPages.forEach((p) => {
         const tr = document.createElement('tr');
         const tdUrl = document.createElement('td');
         tdUrl.textContent = p.url;
@@ -361,7 +361,7 @@ async function renderPerformance(start, end) {
     const data = await apiFetch('/api/performance?start=' + start + '&end=' + end);
     if (!data) return;
 
-    const byPage = data.byPage || [];
+    const byPage = data.data?.byPage || [];
 
     // Compute weighted site-wide averages
     let totalLcp = 0,
@@ -471,8 +471,8 @@ async function renderErrors(start, end) {
     const data = await apiFetch('/api/errors?start=' + start + '&end=' + end);
     if (!data) return;
 
-    const byMessage = data.byMessage || [];
-    const trend = data.trend || [];
+    const byMessage = data.data?.byMessage || [];
+    const trend = data.data?.trend || [];
     const total = byMessage.reduce((s, r) => s + Number(r.occurrences), 0);
 
     const content = document.getElementById('content');
