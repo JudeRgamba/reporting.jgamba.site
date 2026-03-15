@@ -60,25 +60,34 @@ function route() {
     const hash = window.location.hash || '#/overview';
     const path = hash.replace('#', '');
 
-    // Viewers always land on briefing
+    // Viewers always land on reports — redirect and stop
     if (window.SESSION_ROLE === 'viewer' && path !== '/reports') {
         window.location.hash = '#/reports';
-        return;
+        return; // ← stops current route() execution
     }
 
     switch (path) {
         case '/overview':
-            if (!canAccess('overview')) { showError('You are not assigned to the Overview section.'); return; }
+            if (!canAccess('overview')) {
+                showError('You are not assigned to the Overview section.');
+                return;
+            }
             const { start: s1, end: e1 } = getDateRange();
             renderOverview(s1, e1);
             break;
         case '/performance':
-            if (!canAccess('performance')) { showError('You are not assigned to the Performance section.'); return; }
+            if (!canAccess('performance')) {
+                showError('You are not assigned to the Performance section.');
+                return;
+            }
             const { start: s2, end: e2 } = getDateRange();
             renderPerformance(s2, e2);
             break;
         case '/errors':
-            if (!canAccess('errors')) { showError('You are not assigned to the Errors section.'); return; }
+            if (!canAccess('errors')) {
+                showError('You are not assigned to the Errors section.');
+                return;
+            }
             const { start: s3, end: e3 } = getDateRange();
             renderErrors(s3, e3);
             break;
@@ -100,8 +109,12 @@ function route() {
             renderAdmin();
             break;
         default:
-            if (window.SESSION_ROLE === 'viewer') renderReports();
-            else renderOverview();
+            if (window.SESSION_ROLE === 'viewer') {
+                window.location.hash = '#/reports';
+            } else {
+                const { start, end } = getDateRange();
+                renderOverview(start, end);
+            }
     }
 }
 
@@ -954,6 +967,14 @@ function init() {
     });
 
     window.addEventListener('hashchange', route);
+
+    // For viewers, force reports immediately before any routing
+    if (window.SESSION_ROLE === 'viewer') {
+        window.location.hash = '#/reports';
+        renderReports();
+        return;
+    }
+
     route();
 }
 
