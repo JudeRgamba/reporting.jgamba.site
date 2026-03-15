@@ -1021,7 +1021,7 @@ function init() {
     });
 
     document.getElementById('hamburger').addEventListener('click', () => {
-        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('sidebar')?.classList.toggle('open');
     });
 
     window.addEventListener('hashchange', route);

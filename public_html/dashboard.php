@@ -217,6 +217,11 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
       text-align: center;
     }
 
+    .viewer-layout {
+      display: block;
+      padding: 20px;
+    }
+
     /* ── Content ───────────────────────────────────────── */
     .content {
       grid-area: content;
@@ -643,7 +648,9 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
 
     <!-- Header -->
     <header class="header">
-      <button class="hamburger" id="hamburger">☰</button>
+      <?php if ($_SESSION['role'] !== 'viewer'): ?>
+        <button class="hamburger" id="hamburger">☰</button>
+      <?php endif; ?>
       <a class="header-logo" href="#/overview">jgamba<span>.analytics</span></a>
       <div class="header-divider"></div>
       <div class="date-range">
@@ -658,51 +665,53 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
     </header>
 
     <!-- Sidebar -->
-    <nav class="sidebar" id="sidebar">
-      <?php if ($_SESSION['role'] !== 'viewer'): ?>
+    <?php if ($_SESSION['role'] !== 'viewer'): ?>
+      <nav class="sidebar" id="sidebar">
+        <?php if ($_SESSION['role'] !== 'viewer'): ?>
 
-        <?php if (in_array('overview', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
-          <a class="nav-link" href="#/overview">
-            <span class="nav-icon">◈</span> Overview
-          </a>
+          <?php if (in_array('overview', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
+            <a class="nav-link" href="#/overview">
+              <span class="nav-icon">◈</span> Overview
+            </a>
+          <?php endif; ?>
+
+          <?php if (in_array('performance', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
+            <a class="nav-link" href="#/performance">
+              <span class="nav-icon">◎</span> Performance
+            </a>
+          <?php endif; ?>
+
+          <?php if (in_array('errors', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
+            <a class="nav-link" href="#/errors">
+              <span class="nav-icon">⚠</span> Errors
+            </a>
+          <?php endif; ?>
+
+          <?php if (in_array('rawdata', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
+            <a class="nav-link" href="#/rawdata">
+              <span class="nav-icon">◫</span> Raw Data
+            </a>
+          <?php endif; ?>
+
         <?php endif; ?>
 
-        <?php if (in_array('performance', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
-          <a class="nav-link" href="#/performance">
-            <span class="nav-icon">◎</span> Performance
-          </a>
-        <?php endif; ?>
-
-        <?php if (in_array('errors', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
-          <a class="nav-link" href="#/errors">
-            <span class="nav-icon">⚠</span> Errors
-          </a>
-        <?php endif; ?>
-
-        <?php if (in_array('rawdata', $_SESSION['sections'] ?? []) || $_SESSION['role'] === 'super_admin'): ?>
-          <a class="nav-link" href="#/rawdata">
-            <span class="nav-icon">◫</span> Raw Data
-          </a>
-        <?php endif; ?>
-
-      <?php endif; ?>
-
-      <!-- Everyone gets reports/briefing -->
-      <a class="nav-link" href="#/reports">
-        <span class="nav-icon">📋</span>
-        <?= $_SESSION['role'] === 'viewer' ? 'Briefings' : 'Reports' ?>
-      </a>
-
-      <?php if ($_SESSION['role'] === 'super_admin'): ?>
-        <a class="nav-link" href="#/admin">
-          <span class="nav-icon">⚙</span> Admin
+        <!-- Everyone gets reports/briefing -->
+        <a class="nav-link" href="#/reports">
+          <span class="nav-icon">📋</span>
+          <?= $_SESSION['role'] === 'viewer' ? 'Briefings' : 'Reports' ?>
         </a>
-      <?php endif; ?>
-    </nav>
+
+        <?php if ($_SESSION['role'] === 'super_admin'): ?>
+          <a class="nav-link" href="#/admin">
+            <span class="nav-icon">⚙</span> Admin
+          </a>
+        <?php endif; ?>
+      </nav>
+    <?php endif; ?>
 
     <!-- Content -->
-    <main class="content" id="content">
-      <!-- JavaScript renders all views here -->
+    <main class="<?= $_SESSION['role'] === 'viewer' ? 'viewer-layout' : 'main' ?>">
+      <div id="content"></div>
     </main>
 
   </div>
