@@ -808,11 +808,7 @@ async function deleteReport(id, title) {
     }
 }
 
-// Report Builder
-function openReportBuilder(report) {
-    // TODO — coming next
-    alert('Report builder coming soon');
-}
+// openReportBuilder in report-builder.js
 
 function openReportBriefing(report) {
     // TODO — coming next  
