@@ -68,25 +68,19 @@ function route() {
 
     switch (path) {
         case '/overview':
-            if (!canAccess('overview')) {
-                showError('You are not assigned to the Overview section.');
-                return;
-            }
-            renderOverview();
+            if (!canAccess('overview')) { showError('You are not assigned to the Overview section.'); return; }
+            const { start: s1, end: e1 } = getDateRange();
+            renderOverview(s1, e1);
             break;
         case '/performance':
-            if (!canAccess('performance')) {
-                showError('You are not assigned to the Performance section.');
-                return;
-            }
-            renderPerformance();
+            if (!canAccess('performance')) { showError('You are not assigned to the Performance section.'); return; }
+            const { start: s2, end: e2 } = getDateRange();
+            renderPerformance(s2, e2);
             break;
         case '/errors':
-            if (!canAccess('errors')) {
-                showError('You are not assigned to the Errors section.');
-                return;
-            }
-            renderErrors();
+            if (!canAccess('errors')) { showError('You are not assigned to the Errors section.'); return; }
+            const { start: s3, end: e3 } = getDateRange();
+            renderErrors(s3, e3);
             break;
         case '/rawdata':
             if (!canAccess('rawdata')) {
@@ -822,8 +816,8 @@ async function renderAdmin() {
             <label>Role</label>
             <select id="new-role">
               <option value="viewer">Viewer</option>
-              <option value="admin">Admin</option>
-              <option value="owner">Owner</option>
+              <option value="analyst">Analyst</option>
+              <option value="super_admin">Super Admin</option>
             </select>
           </div>
         </div>
@@ -949,10 +943,6 @@ function renderUsersTable(users) {
 // Init
 function init() {
     initDatePicker();
-
-    if (window.SESSION_USER_ROLE === 'viewer') {
-        document.querySelector('a[href="#/admin"]').style.display = 'none';
-    }
 
     document.getElementById('logout-btn').addEventListener('click', async () => {
         await fetch('/logout.php', { method: 'POST', credentials: 'include' });
