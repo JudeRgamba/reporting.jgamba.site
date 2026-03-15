@@ -1,7 +1,7 @@
 <?php
 require_once 'includes/auth.php';
 
-echo '<pre>' . print_r($_SESSION, true) . '</pre>'; exit;
+// echo '<pre>' . print_r($_SESSION, true) . '</pre>'; exit;
 
 $username     = htmlspecialchars($_SESSION['username']);
 $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['username']);
