@@ -24,6 +24,26 @@ async function apiFetch(url) {
     return res.json();
 }
 
+// API Request — for POST, PUT, DELETE
+async function apiRequest(url, method, body = null) {
+    const opts = {
+        method,
+        credentials: 'include',
+        headers: {
+            'Content-Type':    'application/json',
+            'X-User-Role':     window.SESSION_ROLE     || 'viewer',
+            'X-User-Sections': JSON.stringify(window.SESSION_SECTIONS || []),
+            'X-User-Id':       String(window.SESSION_USER_ID || ''),
+        },
+    };
+    if (body) opts.body = JSON.stringify(body);
+
+    const res = await fetch(url, opts);
+    if (res.status === 401) { window.location.href = '/login.php'; return null; }
+    if (res.status === 403) { showError('You do not have permission to perform this action.'); return null; }
+    return res.json();
+}
+
 // Date Range
 function getDateRange() {
     return {
@@ -791,16 +811,8 @@ function escapeHtml(str) {
 
 async function deleteReport(id, title) {
     if (!confirm(`Delete report "${title}"? This cannot be undone.`)) return;
-    const res = await fetch(`/api/reports/${id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-        headers: {
-            'X-User-Role':     window.SESSION_ROLE,
-            'X-User-Sections': JSON.stringify(window.SESSION_SECTIONS || []),
-            'X-User-Id':       String(window.SESSION_USER_ID)
-        }
-    });
-    const data = await res.json();
+    const data = await apiRequest(`/api/reports/${id}`, 'DELETE');
+    if (!data) return;
     if (data.success) {
         renderReports();
     } else {

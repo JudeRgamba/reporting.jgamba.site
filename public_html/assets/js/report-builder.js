@@ -63,7 +63,7 @@ async function openReportBuilder(existingReport) {
 
     // Build viewer list for sharing
     const viewers   = viewerData?.data || [];
-    
+
     const existingAccess = existingReport
         ? (await apiFetch(`/api/reports/${existingReport.id}/access`).catch(() => null))?.data || []
         : [];
@@ -318,55 +318,23 @@ async function openReportBuilder(existingReport) {
 
             if (isEdit) {
                 // Update existing report
-                const res = await fetch(`/api/reports/${reportId}`, {
-                    method: 'PUT',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type':    'application/json',
-                        'X-User-Role':     window.SESSION_ROLE,
-                        'X-User-Sections': JSON.stringify(window.SESSION_SECTIONS || []),
-                        'X-User-Id':       String(window.SESSION_USER_ID),
-                    },
-                    body: JSON.stringify({ title, snapshot }),
-                });
-                const data = await res.json();
-                if (!data.success) throw new Error(data.error);
+                const data = await apiRequest(`/api/reports/${reportId}`, 'PUT', { title, snapshot });
+                if (!data?.success) throw new Error(data?.error || 'Failed to update');
             } else {
                 // Create new report
-                const res = await fetch('/api/reports', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type':    'application/json',
-                        'X-User-Role':     window.SESSION_ROLE,
-                        'X-User-Sections': JSON.stringify(window.SESSION_SECTIONS || []),
-                        'X-User-Id':       String(window.SESSION_USER_ID),
-                    },
-                    body: JSON.stringify({
-                        title,
-                        section:    primarySection,
-                        date_start: start,
-                        date_end:   end,
-                        snapshot,
-                    }),
+                const data = await apiRequest('/api/reports', 'POST', {
+                    title,
+                    section:    primarySection,
+                    date_start: start,
+                    date_end:   end,
+                    snapshot,
                 });
-                const data = await res.json();
-                if (!data.success) throw new Error(data.error);
+                if (!data?.success) throw new Error(data?.error || 'Failed to create');
                 reportId = data.id;
             }
 
             // Update viewer access
-            await fetch(`/api/reports/${reportId}/access`, {
-                method: 'PUT',
-                credentials: 'include',
-                headers: {
-                    'Content-Type':    'application/json',
-                    'X-User-Role':     window.SESSION_ROLE,
-                    'X-User-Sections': JSON.stringify(window.SESSION_SECTIONS || []),
-                    'X-User-Id':       String(window.SESSION_USER_ID),
-                },
-                body: JSON.stringify({ viewer_ids: viewerIds }),
-            });
+            await apiRequest(`/api/reports/${reportId}/access`, 'PUT', { viewer_ids: viewerIds });
 
             modal.remove();
             renderReports();
