@@ -132,6 +132,16 @@ function drawLineChart(canvasId, data, xKey, yKey, color) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
 
+        // Guard against undefined/empty data
+    if (!data || !Array.isArray(data) || data.length === 0) {
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#7d8590';
+        ctx.font = '14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('No data available for this period', canvas.width / 2, 60);
+        return;
+    }
+
     const labels = data.map((d) => String(d[xKey]).slice(5)); // trim year from date
     const values = data.map((d) => Number(d[yKey]));
 
@@ -272,6 +282,11 @@ async function renderOverview(start, end) {
         apiFetch('/api/dashboard?start=' + start + '&end=' + end),
         apiFetch('/api/pageviews?start=' + start + '&end=' + end),
     ]);
+
+    // TEMP DEBUG
+    console.log('summary:', summary);
+    console.log('pv:', pv);
+    
     if (!summary || !pv) return;
 
     const content = document.getElementById('content');
