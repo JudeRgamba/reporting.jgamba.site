@@ -225,7 +225,7 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
     /* ── Content ───────────────────────────────────────── */
     .content {
       grid-area: content;
-      padding: 28px 32px;
+      padding: 40px 48px;
       overflow-y: auto;
       min-height: calc(100vh - var(--header-h));
     }
@@ -600,6 +600,10 @@ $display_name = htmlspecialchars($_SESSION['display_name'] ?? $_SESSION['usernam
 
     /* ── Responsive ────────────────────────────────────── */
     @media (max-width: 768px) {
+      .content {
+        padding: 20px 16px;
+      }
+
       .shell {
         grid-template-columns: 1fr;
         grid-template-areas: "header" "content";
