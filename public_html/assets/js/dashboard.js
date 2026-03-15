@@ -1767,7 +1767,7 @@ function makeFilterableTable(containerId, columns, rows) {
         }
 
         // Show/hide clear button
-        const clearBtn = document.getElementById(`${containerId}-clear`);
+        const clearBtn = el.querySelector(`${containerId}-clear`);
         if (clearBtn) {
             clearBtn.style.display = searchVal ? 'block' : 'none';
         }
@@ -1777,21 +1777,21 @@ function makeFilterableTable(containerId, columns, rows) {
 
     // ── Event listeners ───────────────────────────────────
     // Search input
-    el.getElementById(`${containerId}-search`)
+    el.querySelector(`${containerId}-search`)
         ?.addEventListener('input', e => {
             searchVal = e.target.value;
             applyFilters();
         });
 
     // Column selector
-    el.getElementById(`${containerId}-col`)
+    el.querySelector(`${containerId}-col`)
         ?.addEventListener('change', e => {
             colFilter = e.target.value;
             applyFilters();
         });
 
     // Clear button
-    el.getElementById(`${containerId}-clear`)
+    el.querySelector(`${containerId}-clear`)
         ?.addEventListener('click', () => {
             searchVal = '';
             colFilter = '';
@@ -1803,7 +1803,7 @@ function makeFilterableTable(containerId, columns, rows) {
         });
 
     // Column header sort
-    el.getElementById(`${containerId}-table`)
+    el.querySelector(`${containerId}-table`)
         ?.querySelectorAll('th[data-sort]')
         .forEach(th => {
             th.addEventListener('click', () => {
