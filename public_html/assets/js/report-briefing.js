@@ -10,53 +10,72 @@ function openReportBriefing(report) {
     const charts  = snapshot.charts  || {};
     const range   = snapshot.date_range || {};
 
-    // Build enabled metrics list
     const enabledMetrics = Object.entries(metrics)
         .filter(([, m]) => m.enabled)
         .map(([, m]) => m);
 
-    // Build enabled charts list
     const enabledCharts = Object.entries(charts)
         .filter(([, c]) => c.enabled && c.data?.length > 0)
         .map(([key, c]) => ({ key, ...c }));
 
-    // Render into main content area instead of modal
-    // so it feels like a full page and prints cleanly
+    // Categorize charts by size needed
+    // Line charts and scatter need more height, single-bar vitals need less
+    const chartHeight = (c) => {
+        if (c.type === 'vital')        return 180;
+        if (c.type === 'scatter')      return 260;
+        if (c.type === 'line')         return 220;
+        if (c.type === 'line_dual')    return 220;
+        if (c.type === 'bar_horizontal') {
+            // Height based on number of bars
+            const bars = Math.min(c.data.length, 10);
+            return Math.max(120, bars * 36 + 40);
+        }
+        if (c.type === 'bar') {
+            const bars = c.data.length;
+            return Math.max(140, bars * 40 + 40);
+        }
+        return 200;
+    };
+
+    // Group charts: vitals in a 3-col row, everything else in 2-col grid
+    const vitalCharts   = enabledCharts.filter(c => c.type === 'vital');
+    const regularCharts = enabledCharts.filter(c => c.type !== 'vital');
+
     const content = document.getElementById('content');
-
     content.innerHTML = `
-        <div id="briefing-view" style="max-width:800px;margin:0 auto;">
+        <div id="briefing-view" style="max-width:1000px;margin:0 auto;">
 
-            <!-- Back button — hidden on print -->
-            <div class="no-print" style="margin-bottom:24px;">
+            <!-- Back + Export buttons -->
+            <div class="no-print" style="
+                display:flex;align-items:center;
+                justify-content:space-between;
+                margin-bottom:24px;
+            ">
                 <button id="briefing-back" class="btn-secondary">
                     ← Back to Reports
                 </button>
-                <button id="briefing-pdf" class="btn-primary"
-                    style="margin-left:12px;">
+                <button id="briefing-pdf" class="btn-primary">
                     Export as PDF
                 </button>
             </div>
 
             <!-- Report Header -->
             <div style="
+                background:var(--surface);
                 border:1px solid var(--border);
                 border-radius:12px;
-                padding:32px;
-                margin-bottom:24px;
-                background:var(--surface);
+                padding:28px 32px;
+                margin-bottom:20px;
             ">
                 <div style="
                     font-size:11px;font-weight:600;
                     text-transform:uppercase;letter-spacing:1px;
-                    color:var(--text-dim);margin-bottom:8px;
-                ">
-                    Analytics Briefing
-                </div>
-                <div style="font-size:28px;font-weight:700;margin-bottom:8px;">
+                    color:var(--text-dim);margin-bottom:6px;
+                ">Analytics Briefing</div>
+                <div style="font-size:26px;font-weight:700;margin-bottom:8px;">
                     ${escapeHtml(snapshot.title || report.title)}
                 </div>
-                <div style="font-size:14px;color:var(--text-dim);">
+                <div style="font-size:13px;color:var(--text-dim);">
                     Prepared by ${escapeHtml(snapshot.created_by_name || report.created_by_name || 'Unknown')}
                     ${range.start ? ` · ${range.start} → ${range.end}` : ''}
                     · ${new Date(report.created_at).toLocaleDateString('en-US', {
@@ -65,72 +84,66 @@ function openReportBriefing(report) {
                 </div>
             </div>
 
-            <!-- Headline Takeaway -->
+            <!-- Key Takeaway -->
             ${snapshot.takeaway ? `
             <div style="
                 border-left:4px solid var(--accent);
-                padding:16px 20px;
-                margin-bottom:24px;
+                padding:14px 20px;
+                margin-bottom:20px;
                 background:var(--surface);
                 border-radius:0 8px 8px 0;
             ">
                 <div style="
-                    font-size:11px;font-weight:600;
+                    font-size:10px;font-weight:600;
                     text-transform:uppercase;letter-spacing:1px;
-                    color:var(--accent);margin-bottom:6px;
+                    color:var(--accent);margin-bottom:4px;
                 ">Key Takeaway</div>
-                <div style="font-size:17px;font-weight:600;line-height:1.5;">
+                <div style="font-size:16px;font-weight:600;line-height:1.5;">
                     ${escapeHtml(snapshot.takeaway)}
                 </div>
             </div>` : ''}
 
-            <!-- Summary Text -->
+            <!-- Summary -->
             ${snapshot.summary ? `
             <div style="
-                padding:20px 24px;
-                margin-bottom:24px;
-                background:var(--surface);
-                border:1px solid var(--border);
-                border-radius:8px;
-                font-size:15px;
-                line-height:1.7;
-                color:var(--text);
+                padding:16px 20px;margin-bottom:20px;
+                background:var(--surface);border:1px solid var(--border);
+                border-radius:8px;font-size:14px;line-height:1.7;
             ">
                 <div style="
-                    font-size:11px;font-weight:600;
+                    font-size:10px;font-weight:600;
                     text-transform:uppercase;letter-spacing:1px;
-                    color:var(--text-dim);margin-bottom:10px;
+                    color:var(--text-dim);margin-bottom:8px;
                 ">What This Means</div>
                 ${escapeHtml(snapshot.summary).replace(/\n/g, '<br>')}
             </div>` : ''}
 
-            <!-- Metric Cards -->
+            <!-- Metric Cards — responsive grid -->
             ${enabledMetrics.length > 0 ? `
-            <div style="margin-bottom:24px;">
+            <div style="margin-bottom:20px;">
                 <div style="
-                    font-size:11px;font-weight:600;
+                    font-size:10px;font-weight:600;
                     text-transform:uppercase;letter-spacing:1px;
-                    color:var(--text-dim);margin-bottom:12px;
+                    color:var(--text-dim);margin-bottom:10px;
                 ">Numbers at a Glance</div>
                 <div style="
                     display:grid;
-                    grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));
+                    grid-template-columns:repeat(auto-fill, minmax(160px, 1fr));
                     gap:12px;
                 ">
                     ${enabledMetrics.map(m => `
                         <div style="
                             background:var(--surface);
                             border:1px solid var(--border);
-                            border-radius:8px;
-                            padding:16px;
+                            border-radius:8px;padding:16px;
                             text-align:center;
                         ">
                             <div style="
-                                font-size:24px;font-weight:700;
-                                margin-bottom:4px;
+                                font-size:22px;font-weight:700;
+                                margin-bottom:4px;font-family:var(--font-mono);
                             ">${escapeHtml(String(m.value))}</div>
                             <div style="
-                                font-size:12px;color:var(--text-dim);
+                                font-size:11px;color:var(--text-dim);
                                 text-transform:uppercase;letter-spacing:0.5px;
                             ">${escapeHtml(m.label)}</div>
                         </div>
@@ -138,28 +151,72 @@ function openReportBriefing(report) {
                 </div>
             </div>` : ''}
 
-            <!-- Charts -->
-            ${enabledCharts.map((c, i) => `
+            <!-- Vitals row — 3 columns if any -->
+            ${vitalCharts.length > 0 ? `
             <div style="
-                background:var(--surface);
-                border:1px solid var(--border);
-                border-radius:8px;
-                padding:24px;
-                margin-bottom:24px;
-            ">
-                <div style="
-                    font-size:14px;font-weight:600;
-                    margin-bottom:16px;
-                ">${escapeHtml(c.label)}</div>
-                <canvas id="briefing-chart-${i}"></canvas>
-            </div>`).join('')}
+                display:grid;
+                grid-template-columns:repeat(${Math.min(vitalCharts.length, 3)}, 1fr);
+                gap:16px;margin-bottom:20px;
+            " class="chart-row-3">
+                ${vitalCharts.map((c, i) => `
+                    <div style="
+                        background:var(--surface);
+                        border:1px solid var(--border);
+                        border-radius:8px;overflow:hidden;
+                    ">
+                        <div style="
+                            padding:12px 16px;
+                            border-bottom:1px solid var(--border);
+                            font-size:12px;font-weight:600;
+                            color:var(--text-muted);
+                            text-transform:uppercase;letter-spacing:0.06em;
+                        ">${escapeHtml(c.label)}</div>
+                        <div style="padding:12px;height:${chartHeight(c)}px;position:relative;">
+                            <canvas id="briefing-chart-vital-${i}"></canvas>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>` : ''}
+
+            <!-- Regular charts — 2-column grid, size-aware -->
+            <div style="
+                display:grid;
+                grid-template-columns:1fr 1fr;
+                gap:16px;
+                margin-bottom:20px;
+            " class="chart-row" id="briefing-charts-grid">
+                ${regularCharts.map((c, i) => {
+                    const h = chartHeight(c);
+                    // Wide charts span both columns
+                    const wide = c.type === 'line_dual' ||
+                                 c.type === 'scatter'   ||
+                                 (c.type === 'bar_horizontal' && c.data.length > 6);
+                    return `
+                        <div style="
+                            background:var(--surface);
+                            border:1px solid var(--border);
+                            border-radius:8px;overflow:hidden;
+                            ${wide ? 'grid-column:span 2;' : ''}
+                        ">
+                            <div style="
+                                padding:12px 16px;
+                                border-bottom:1px solid var(--border);
+                                font-size:12px;font-weight:600;
+                                color:var(--text-muted);
+                                text-transform:uppercase;letter-spacing:0.06em;
+                            ">${escapeHtml(c.label)}</div>
+                            <div style="padding:16px;height:${h}px;position:relative;">
+                                <canvas id="briefing-chart-${i}"></canvas>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
 
             <!-- Footer -->
             <div style="
-                text-align:center;
-                padding:20px;
-                font-size:12px;
-                color:var(--text-dim);
+                text-align:center;padding:16px;
+                font-size:12px;color:var(--text-dim);
                 border-top:1px solid var(--border);
                 margin-top:8px;
             ">
@@ -172,8 +229,13 @@ function openReportBriefing(report) {
         </div>
     `;
 
-    // Draw charts after DOM is ready
-    enabledCharts.forEach((c, i) => {
+    // Draw vitals charts
+    vitalCharts.forEach((c, i) => {
+        drawBriefingChart(`briefing-chart-vital-${i}`, c);
+    });
+
+    // Draw regular charts
+    regularCharts.forEach((c, i) => {
         drawBriefingChart(`briefing-chart-${i}`, c);
     });
 
@@ -439,30 +501,42 @@ function drawBriefingChart(canvasId, chart) {
 }
 
 function exportBriefingPdf(title) {
-    // Hide no-print elements, trigger browser print dialog
-    // which can save as PDF natively
     const style = document.createElement('style');
     style.id = 'print-style';
     style.textContent = `
         @media print {
-            .no-print { display: none !important; }
-            #sidebar   { display: none !important; }
-            #topbar    { display: none !important; }
-            #main      { margin: 0 !important; padding: 0 !important; }
-            body       { background: white !important; color: black !important; }
-            #briefing-view {
-                max-width: 100% !important;
-                color: black !important;
+            @page { margin: 15mm; }
+
+            .no-print    { display: none !important; }
+            #sidebar     { display: none !important; }
+            #topbar      { display: none !important; }
+            .header      { display: none !important; }
+            #main        { margin: 0 !important; padding: 0 !important; }
+
+            body         { background: white !important; color: #111 !important; }
+            #briefing-view { max-width: 100% !important; color: #111 !important; }
+
+            /* Keep grid layout in print */
+            .chart-row   { grid-template-columns: 1fr 1fr !important; }
+            .chart-row-3 { grid-template-columns: repeat(3, 1fr) !important; }
+
+            /* Prevent charts from breaking across pages */
+            .panel, [style*="border-radius:8px"] {
+                break-inside: avoid;
+                page-break-inside: avoid;
             }
+
             canvas { max-width: 100% !important; }
+
+            /* Override dark theme colors for print */
+            [style*="background:var(--surface)"] { background: #f8f9fa !important; }
+            [style*="border:1px solid var(--border)"] { border-color: #e0e0e0 !important; }
+            [style*="color:var(--text)"] { color: #111 !important; }
+            [style*="color:var(--text-dim)"] { color: #666 !important; }
+            [style*="color:var(--text-muted)"] { color: #888 !important; }
         }
     `;
     document.head.appendChild(style);
-
     window.print();
-
-    // Clean up print style after dialog closes
-    setTimeout(() => {
-        document.getElementById('print-style')?.remove();
-    }, 1000);
+    setTimeout(() => document.getElementById('print-style')?.remove(), 1000);
 }
