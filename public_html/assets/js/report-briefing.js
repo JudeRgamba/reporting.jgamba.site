@@ -190,22 +190,27 @@ function drawBriefingChart(canvasId, chart) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || !chart.data?.length) return;
 
-    // Destroy existing instance if any
     if (chartInstances[canvasId]) {
         chartInstances[canvasId].destroy();
         delete chartInstances[canvasId];
     }
 
-    // Determine chart type and data shape based on key
-    if (chart.key === 'pageviews_over_time' || chart.key === 'error_trend') {
-        // Line chart
-        const xKey = chart.key === 'error_trend' ? 'day' : 'day';
-        const yKey = chart.key === 'error_trend' ? 'error_count' : 'views';
-        const color = chart.key === 'error_trend' ? '#f85149' : '#58a6ff';
+    const type = chart.type || 'bar';
 
-        const labels = chart.data.map(d => String(d[xKey]).slice(5, 10));
+    // ── Line charts ───────────────────────────────────────
+    if (type === 'line') {
+        const xKey = chart.key === 'error_trend'   ? 'day' :
+                     chart.key === 'error_rate'     ? 'day' :
+                     chart.key === 'bounce_rate'    ? 'day' : 'day';
+        const yKey = chart.key === 'error_trend'   ? 'error_count' :
+                     chart.key === 'error_rate'     ? 'error_rate'  :
+                     chart.key === 'bounce_rate'    ? 'bounce_rate'  : 'views';
+        const color = chart.key === 'error_trend'  ? '#f85149' :
+                      chart.key === 'error_rate'   ? '#d29922' :
+                      chart.key === 'bounce_rate'  ? '#d29922' : '#58a6ff';
+
+        const labels = chart.data.map(d => String(d[xKey]).slice(0,10).slice(5));
         const values = chart.data.map(d => Number(d[yKey]));
-
         chartInstances[canvasId] = new Chart(canvas, {
             type: 'line',
             data: {
@@ -215,7 +220,7 @@ function drawBriefingChart(canvasId, chart) {
                     borderColor: color,
                     backgroundColor: color + '22',
                     borderWidth: 2,
-                    pointRadius: 4,
+                    pointRadius: 3,
                     fill: true,
                     tension: 0.3,
                 }],
@@ -230,23 +235,80 @@ function drawBriefingChart(canvasId, chart) {
             },
         });
 
-    } else if (chart.key === 'top_pages') {
-        // Horizontal bar — top pages
-        const labels = chart.data.map(d =>
-            String(d.url).replace('https://test.jgamba.site', '') || '/'
-        );
-        const values = chart.data.map(d => Number(d.views));
+    // ── Dual line (pageviews + sessions) ──────────────────
+    } else if (type === 'line_dual') {
+        const labels = chart.data.map(d => String(d.day).slice(0,10).slice(5));
+        chartInstances[canvasId] = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Pageviews',
+                        data: chart.data.map(d => Number(d.pageviews || d.views || 0)),
+                        borderColor: '#58a6ff',
+                        backgroundColor: '#58a6ff22',
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        fill: true,
+                        tension: 0.3,
+                    },
+                    {
+                        label: 'Sessions',
+                        data: chart.data.map(d => Number(d.sessions || 0)),
+                        borderColor: '#3fb950',
+                        backgroundColor: '#3fb95022',
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        fill: true,
+                        tension: 0.3,
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: true, labels: { color: '#7d8590', font: { size: 11 } } }
+                },
+                scales: {
+                    x: { ticks: { color: '#7d8590' }, grid: { color: '#21262d' } },
+                    y: { beginAtZero: true, ticks: { color: '#7d8590' }, grid: { color: '#21262d' } },
+                },
+            },
+        });
 
+    // ── Horizontal bar ────────────────────────────────────
+    } else if (type === 'bar_horizontal') {
+        const labelKey  = chart.key === 'top_pages_bar'    ? 'url' :
+                          chart.key === 'event_types'       ? 'type' :
+                          chart.key === 'errors_by_type'    ? 'error_type' :
+                          chart.key === 'errors_by_page'    ? 'url' :
+                          chart.key === 'errors_by_element' ? 'element_type' :
+                          chart.key === 'traffic_sources'   ? 'source' :
+                          chart.key === 'connection_types'  ? 'connection_type' : 'label';
+        const valueKey  = chart.key === 'traffic_sources'  ? 'pageviews' :
+                          chart.key === 'connection_types'  ? 'count' :
+                          chart.key === 'errors_by_page'    ? 'count' :
+                          chart.key === 'errors_by_type'    ? 'count' :
+                          chart.key === 'errors_by_element' ? 'count' :
+                          chart.key === 'event_types'       ? 'count' : 'views';
+        const color     = chart.key.startsWith('error')    ? '#f85149' :
+                          chart.key === 'event_types'       ? '#a371f7' : '#58a6ff';
+
+        const labels = chart.data.slice(0,10).map(d =>
+            String(d[labelKey] || '').replace('https://test.jgamba.site', '') || '/'
+        );
         chartInstances[canvasId] = new Chart(canvas, {
             type: 'bar',
             data: {
                 labels,
                 datasets: [{
-                    data: values,
-                    backgroundColor: '#58a6ff44',
-                    borderColor: '#58a6ff',
+                    data: chart.data.slice(0,10).map(d => Number(d[valueKey] || 0)),
+                    backgroundColor: color + '44',
+                    borderColor: color,
                     borderWidth: 1,
                     borderRadius: 4,
+                    maxBarThickness: 32,
                 }],
             },
             options: {
@@ -254,38 +316,122 @@ function drawBriefingChart(canvasId, chart) {
                 responsive: true,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { beginAtZero: true, ticks: { color: '#7d8590' }, grid: { color: '#21262d' } },
-                    y: { ticks: { color: '#7d8590', font: { size: 11 } }, grid: { display: false } },
+                    x: { beginAtZero: true, ticks: { color: '#7d8590', stepSize: 1, callback: v => Number.isInteger(v) ? v : null }, grid: { color: '#21262d' } },
+                    y: { ticks: { color: '#7d8590', font: { size: 10 } }, grid: { display: false } },
                 },
             },
         });
 
-    } else if (chart.key === 'performance_by_page') {
-        // Bar chart — avg load time per page
-        const labels = chart.data.map(d =>
-            String(d.url).replace('https://test.jgamba.site', '') || '/'
-        );
-        const values = chart.data.map(d => Number(d.avg_load_ms) || 0);
-        const colors = values.map(v =>
-            v > 3000 ? '#f85149' : v > 1500 ? '#d29922' : '#3fb950'
-        );
+    // ── Vertical bar ──────────────────────────────────────
+    } else if (type === 'bar') {
+        const labelKey = chart.key === 'speed_distribution'  ? 'bucket' :
+                         chart.key === 'pages_per_session'    ? 'pages_in_session' :
+                         chart.key === 'device_breakdown'     ? 'device_type' :
+                         chart.key === 'session_durations'    ? 'duration_bucket' : 'label';
+        const valueKey = chart.key === 'pages_per_session'   ? 'session_count' :
+                         chart.key === 'device_breakdown'     ? 'sessions' :
+                         chart.key === 'session_durations'    ? 'session_count' : 'count';
+        const color    = chart.key === 'speed_distribution'  ? null : '#58a6ff';
+
+        const bucketOrder = {
+            speed_distribution: ['0-500ms','500ms-1s','1-2s','2-3s','3s+'],
+            session_durations:  ['0-10s','10-30s','30-60s','1-3min','3-10min','10min+'],
+        };
+        const ordered = bucketOrder[chart.key]
+            ? bucketOrder[chart.key].map(b =>
+                chart.data.find(d => d[labelKey] === b) || { [labelKey]: b, [valueKey]: 0 }
+              )
+            : chart.data;
+
+        const speedColors = ['#3fb950','#3fb950','#d29922','#f85149','#f85149'];
 
         chartInstances[canvasId] = new Chart(canvas, {
             type: 'bar',
             data: {
-                labels,
+                labels: ordered.map(d => String(d[labelKey])),
                 datasets: [{
-                    data: values,
-                    backgroundColor: colors,
+                    data: ordered.map(d => Number(d[valueKey] || 0)),
+                    backgroundColor: chart.key === 'speed_distribution'
+                        ? speedColors.map(c => c + '44')
+                        : (color || '#58a6ff') + '44',
+                    borderColor: chart.key === 'speed_distribution'
+                        ? speedColors
+                        : color || '#58a6ff',
+                    borderWidth: 1,
                     borderRadius: 4,
+                    maxBarThickness: 48,
                 }],
             },
             options: {
                 responsive: true,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { ticks: { color: '#7d8590', font: { size: 11 } }, grid: { color: '#21262d' } },
-                    y: { beginAtZero: true, ticks: { color: '#7d8590' }, grid: { color: '#21262d' } },
+                    x: { ticks: { color: '#7d8590' }, grid: { color: '#21262d' } },
+                    y: { beginAtZero: true, ticks: { color: '#7d8590', stepSize: 1, callback: v => Number.isInteger(v) ? v : null }, grid: { color: '#21262d' } },
+                },
+            },
+        });
+
+    // ── Scatter ───────────────────────────────────────────
+    } else if (type === 'scatter') {
+        chartInstances[canvasId] = new Chart(canvas, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    data: chart.data,
+                    backgroundColor: chart.data.map(d =>
+                        d.y > 3000 ? '#f8514999' : d.y > 1500 ? '#d2992299' : '#3fb95099'
+                    ),
+                    pointRadius: 7,
+                }],
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => [ctx.raw.label, `TTFB: ${ctx.raw.x}ms`, `Load: ${ctx.raw.y}ms`]
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'TTFB (ms)', color: '#7d8590' }, ticks: { color: '#7d8590', callback: v => v + 'ms' }, grid: { color: '#21262d' } },
+                    y: { title: { display: true, text: 'Load (ms)', color: '#7d8590' }, beginAtZero: true, ticks: { color: '#7d8590', callback: v => v + 'ms' }, grid: { color: '#21262d' } },
+                },
+            },
+        });
+
+    // ── Vital single bar with threshold context ───────────
+    } else if (type === 'vital') {
+        const d = chart.data[0];
+        if (!d) return;
+        const color = d.value < d.thresholds[0] ? '#3fb950' :
+                      d.value < d.thresholds[1] ? '#d29922' : '#f85149';
+        chartInstances[canvasId] = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: [d.metric],
+                datasets: [{
+                    data: [d.value],
+                    backgroundColor: color + '99',
+                    borderColor: color,
+                    borderWidth: 2,
+                    borderRadius: 4,
+                    barThickness: 60,
+                }],
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#7d8590' }, grid: { display: false } },
+                    y: {
+                        beginAtZero: true,
+                        max: Math.max(d.value * 1.4, d.thresholds[1] * 1.3),
+                        ticks: { color: '#7d8590', callback: v => v + d.unit },
+                        grid: { color: '#21262d' },
+                    },
                 },
             },
         });

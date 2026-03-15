@@ -1150,7 +1150,7 @@ async function renderErrors(start, end) {
                 maintainAspectRatio: true,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { beginAtZero: true, ticks: { color: '#7d8590' }, grid: { color: '#21262d' } },
+                    x: { beginAtZero: true, ticks: { color: '#7d8590', stepSize: 1 }, grid: { color: '#21262d' } },
                     y: { ticks: { color: '#7d8590' }, grid: { display: false } },
                 },
             },
@@ -1188,7 +1188,7 @@ async function renderErrors(start, end) {
                 maintainAspectRatio: true,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { beginAtZero: true, ticks: { color: '#7d8590' }, grid: { color: '#21262d' } },
+                    x: { beginAtZero: true, ticks: { color: '#7d8590', stepSize: 1, }, grid: { color: '#21262d' } },
                     y: { ticks: { color: '#7d8590' }, grid: { display: false } },
                 },
             },
@@ -1237,7 +1237,7 @@ async function renderErrors(start, end) {
                     }
                 },
                 scales: {
-                    x: { beginAtZero: true, ticks: { color: '#7d8590' }, grid: { color: '#21262d' } },
+                    x: { beginAtZero: true, ticks: { color: '#7d8590', stepSize: 1, }, grid: { color: '#21262d' } },
                     y: { ticks: { color: '#7d8590', font: { size: 10 } }, grid: { display: false } },
                 },
             },
