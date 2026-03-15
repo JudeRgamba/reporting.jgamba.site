@@ -59,7 +59,7 @@ function showLoading() {
 function route() {
     const hash = window.location.hash || '#/overview';
     const path = hash.replace('#', '');
-    
+
     // Viewers always land on briefing
     if (window.SESSION_ROLE === 'viewer' && path !== '/reports') {
         window.location.hash = '#/reports';
@@ -619,6 +619,170 @@ async function renderRawData() {
 
         tbody.appendChild(tr);
     });
+}
+
+// View: Reports
+async function renderReports() {
+    showLoading();
+    const data = await apiFetch('/api/reports');
+    if (!data) return;
+
+    const reports = data.data || [];
+    const isViewer = window.SESSION_ROLE === 'viewer';
+    const canCreate = window.SESSION_ROLE === 'super_admin' || window.SESSION_ROLE === 'analyst';
+    const content = document.getElementById('content');
+
+    content.innerHTML = `
+        <div class="page-title">${isViewer ? 'Stakeholder Briefings' : 'Reports'}</div>
+
+        ${canCreate ? `
+        <div style="display:flex;justify-content:flex-end;margin-bottom:20px;">
+            <button id="create-report-btn" class="btn-primary">
+                + Create Report
+            </button>
+        </div>` : ''}
+
+        <div class="panel">
+            <div class="panel-header">
+                ${isViewer ? 'Reports shared with you' : 'Your saved reports'}
+            </div>
+
+            ${reports.length === 0 ? `
+            <div style="text-align:center;padding:60px;color:var(--text-dim);">
+                <div style="font-size:40px;margin-bottom:12px;">📋</div>
+                <div style="font-size:16px;margin-bottom:8px;">
+                    ${isViewer ? 'No reports have been shared with you yet.' : 'No reports yet.'}
+                </div>
+                ${canCreate ? '<div style="font-size:13px;">Click "+ Create Report" to build your first report.</div>' : ''}
+            </div>` : `
+            <div id="reports-list">
+                ${reports.map(r => renderReportCard(r, isViewer)).join('')}
+            </div>`}
+        </div>
+    `;
+
+    // Attach create button
+    if (canCreate) {
+        document.getElementById('create-report-btn')
+            ?.addEventListener('click', () => openReportBuilder(null));
+    }
+
+    // Attach view/delete buttons
+    reports.forEach(r => {
+        document.getElementById(`view-report-${r.id}`)
+            ?.addEventListener('click', () => openReportBriefing(r));
+
+        if (canCreate) {
+            document.getElementById(`delete-report-${r.id}`)
+                ?.addEventListener('click', () => deleteReport(r.id, r.title));
+
+            document.getElementById(`edit-report-${r.id}`)
+                ?.addEventListener('click', () => openReportBuilder(r));
+        }
+    });
+}
+
+function renderReportCard(r, isViewer) {
+    const snapshot = typeof r.snapshot === 'string' ? JSON.parse(r.snapshot) : r.snapshot;
+    const dateRange = r.date_start
+        ? `${r.date_start} → ${r.date_end}`
+        : 'All time';
+    const sectionColors = {
+        overview:    '#58a6ff',
+        performance: '#3fb950',
+        errors:      '#f85149',
+        rawdata:     '#a371f7'
+    };
+    const sectionColor = sectionColors[r.section] || '#7d8590';
+
+    return `
+        <div class="report-card" style="
+            border:1px solid var(--border);
+            border-radius:8px;
+            padding:20px;
+            margin-bottom:12px;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:16px;
+        ">
+            <div style="flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                    <span style="
+                        background:${sectionColor}22;
+                        color:${sectionColor};
+                        font-size:11px;
+                        font-weight:600;
+                        padding:2px 8px;
+                        border-radius:4px;
+                        text-transform:uppercase;
+                        letter-spacing:0.5px;
+                    ">${r.section}</span>
+                    <span style="color:var(--text-dim);font-size:12px;">${dateRange}</span>
+                </div>
+                <div style="font-size:16px;font-weight:600;margin-bottom:4px;
+                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    ${escapeHtml(r.title)}
+                </div>
+                <div style="font-size:13px;color:var(--text-dim);">
+                    Prepared by ${escapeHtml(r.created_by_name || 'Unknown')} ·
+                    ${new Date(r.created_at).toLocaleDateString('en-US', {
+                        month: 'short', day: 'numeric', year: 'numeric'
+                    })}
+                </div>
+                ${snapshot?.takeaway ? `
+                <div style="
+                    margin-top:8px;
+                    font-size:13px;
+                    color:var(--text-muted);
+                    font-style:italic;
+                    overflow:hidden;
+                    text-overflow:ellipsis;
+                    white-space:nowrap;
+                ">"${escapeHtml(snapshot.takeaway)}"</div>` : ''}
+            </div>
+            <div style="display:flex;gap:8px;flex-shrink:0;">
+                <button id="view-report-${r.id}" class="btn-secondary" style="font-size:13px;">
+                    View
+                </button>
+                ${!isViewer ? `
+                <button id="edit-report-${r.id}" class="btn-secondary" style="font-size:13px;">
+                    Edit
+                </button>
+                <button id="delete-report-${r.id}" class="btn-danger" style="font-size:13px;">
+                    Delete
+                </button>` : ''}
+            </div>
+        </div>
+    `;
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+async function deleteReport(id, title) {
+    if (!confirm(`Delete report "${title}"? This cannot be undone.`)) return;
+    const res = await fetch(`/api/reports/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+            'X-User-Role':     window.SESSION_ROLE,
+            'X-User-Sections': JSON.stringify(window.SESSION_SECTIONS || []),
+            'X-User-Id':       String(window.SESSION_USER_ID)
+        }
+    });
+    const data = await res.json();
+    if (data.success) {
+        renderReports();
+    } else {
+        alert('Failed to delete report: ' + data.error);
+    }
 }
 
 // View: Admin
