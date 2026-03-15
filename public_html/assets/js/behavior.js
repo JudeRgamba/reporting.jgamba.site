@@ -94,6 +94,8 @@ async function renderBehavior(start, end) {
             ${panelHeader('Scroll Depth by Page', scroll, 'scroll-depth.csv')}
             <div id="scroll-table"></div>
         </div>
+        <!-- Comments -->
+        ${commentsHTML}
     `;
 
     // ── Summary Cards ────────────────────────────────────

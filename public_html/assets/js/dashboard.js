@@ -356,32 +356,32 @@ async function renderOverview(start, end) {
         <!-- Summary Cards -->
         <div class="cards-grid" id="cards"></div>
 
-        <!-- Pageviews + Sessions dual line -->
-        <div class="panel">
+        <!-- Dual line chart — full width, needs height for two datasets -->
+        <div class="panel" style="margin-bottom:20px;">
             ${panelHeader('Pageviews & Sessions Over Time', sotData, 'pageviews-sessions.csv')}
-            <div class="panel-body" style="position:relative;min-height:220px;">
+            <div class="panel-body" style="position:relative;height:240px;">
                 <canvas id="pv-chart"></canvas>
             </div>
         </div>
 
-        <!-- Top Pages + Event Types side by side -->
+        <!-- Top pages bar + Event types side by side -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;" class="chart-row">
             <div class="panel">
                 ${panelHeader('Top Pages', topPages, 'top-pages.csv')}
-                <div class="panel-body" style="position:relative;min-height:220px;">
+                <div class="panel-body" style="position:relative;height:${Math.max(160, Math.min(topPages.length, 8) * 36 + 40)}px;">
                     <canvas id="top-pages-chart"></canvas>
                 </div>
             </div>
             <div class="panel">
                 ${panelHeader('Event Type Breakdown', eventTypeData, 'event-types.csv')}
-                <div class="panel-body" style="position:relative;min-height:220px;">
+                <div class="panel-body" style="position:relative;height:${Math.max(160, Math.min(eventTypeData.length, 8) * 36 + 40)}px;">
                     <canvas id="event-types-chart"></canvas>
                 </div>
             </div>
         </div>
 
         <!-- Top Pages Table -->
-        <div class="panel">
+        <div class="panel" style="margin-bottom:20px;">
             ${panelHeader('Top Pages Detail', topPages, 'top-pages-detail.csv')}
             <div id="top-pages-table"></div>
         </div>
@@ -445,7 +445,7 @@ async function renderOverview(start, end) {
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: {
                         display: true,
@@ -488,7 +488,7 @@ async function renderOverview(start, end) {
             options: {
                 indexAxis: 'y',
                 responsive: true,
-                maintainAspectRatio: true,
+                maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
                     x: { beginAtZero: true, ticks: { color: '#7d8590' }, grid: { color: '#21262d' } },
@@ -532,7 +532,7 @@ async function renderOverview(start, end) {
             options: {
                 indexAxis: 'y',
                 responsive: true,
-                maintainAspectRatio: true,
+                maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
                     x: { beginAtZero: true, ticks: { color: '#7d8590' }, grid: { color: '#21262d' } },
