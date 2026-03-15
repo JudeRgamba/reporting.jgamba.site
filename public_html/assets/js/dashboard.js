@@ -5,6 +5,7 @@
 async function apiFetch(url) {
     const res = await fetch(url, {
         credentials: 'include',
+        cach: 'no-store', // prevents caching data stored
         headers: {
             'Content-Type': 'application/json',
             'X-User-Role': window.SESSION_ROLE || 'viewer',
@@ -286,7 +287,7 @@ async function renderOverview(start, end) {
     // TEMP DEBUG
     console.log('summary:', summary);
     console.log('pv:', pv);
-    
+
     if (!summary || !pv) return;
 
     const content = document.getElementById('content');
