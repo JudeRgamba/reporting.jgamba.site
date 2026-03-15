@@ -36,69 +36,61 @@ async function renderBehavior(start, end) {
     const content = document.getElementById('content');
     content.innerHTML = `
         <div class="page-title">Behavior</div>
-
-        <!-- Summary Cards -->
         <div class="cards-grid" id="behavior-cards"></div>
 
-        <!-- Row 1: Bounce Rate + Pages Per Session -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;" class="chart-row">
             <div class="panel">
-                <div class="panel-header">Bounce Rate Over Time</div>
+                ${panelHeader('Bounce Rate Over Time', bounce, 'bounce-rate.csv')}
                 <div class="panel-body" style="position:relative;min-height:200px;">
                     <canvas id="bounce-chart"></canvas>
                 </div>
             </div>
             <div class="panel">
-                <div class="panel-header">Pages Per Session</div>
+                ${panelHeader('Pages Per Session', pages, 'pages-per-session.csv')}
                 <div class="panel-body" style="position:relative;min-height:200px;">
                     <canvas id="pages-chart"></canvas>
                 </div>
             </div>
         </div>
 
-        <!-- Row 2: Traffic Sources -->
         <div class="panel" style="margin-bottom:20px;">
-            <div class="panel-header">Traffic Sources</div>
+            ${panelHeader('Traffic Sources', sources, 'traffic-sources.csv')}
             <div class="panel-body" style="position:relative;min-height:200px;">
                 <canvas id="sources-chart"></canvas>
             </div>
         </div>
 
-        <!-- Row 3: Device breakdown + Connection types -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;" class="chart-row">
             <div class="panel">
-                <div class="panel-header">Device Breakdown</div>
+                ${panelHeader('Device Breakdown', devices, 'devices.csv')}
                 <div class="panel-body" style="position:relative;min-height:200px;">
                     <canvas id="devices-chart"></canvas>
                 </div>
             </div>
             <div class="panel">
-                <div class="panel-header">Connection Types</div>
+                ${panelHeader('Connection Types', conns, 'connections.csv')}
                 <div class="panel-body" style="position:relative;min-height:200px;">
                     <canvas id="connections-chart"></canvas>
                 </div>
             </div>
         </div>
 
-        <!-- Row 4: Performance by Device -->
         <div class="panel" style="margin-bottom:20px;">
-            <div class="panel-header">Avg Load Time by Device</div>
+            ${panelHeader('Avg Load Time by Device', devices, 'device-performance.csv')}
             <div class="panel-body" style="position:relative;min-height:200px;">
                 <canvas id="device-perf-chart"></canvas>
             </div>
         </div>
 
-        <!-- Row 5: Session Duration Distribution -->
         <div class="panel" style="margin-bottom:20px;">
-            <div class="panel-header">Session Duration Distribution</div>
+            ${panelHeader('Session Duration Distribution', sessions, 'session-durations.csv')}
             <div class="panel-body" style="position:relative;min-height:200px;">
                 <canvas id="session-duration-chart"></canvas>
             </div>
         </div>
 
-        <!-- Row 6: Scroll Depth Table -->
         <div class="panel" style="margin-bottom:20px;">
-            <div class="panel-header">Scroll Depth by Page</div>
+            ${panelHeader('Scroll Depth by Page', scroll, 'scroll-depth.csv')}
             <div id="scroll-table"></div>
         </div>
     `;

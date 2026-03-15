@@ -330,16 +330,14 @@ async function renderOverview(start, end) {
     <div class="page-title">Overview</div>
     <div class="cards-grid" id="cards"></div>
     <div class="panel">
-      <div class="panel-header">Pageviews Over Time</div>
-      <div class="panel-body" style="position:relative;width:100%;min-height:200px;">
-        <canvas id="pv-chart"></canvas>
-      </div>
+        ${panelHeader('Pageviews Over Time', byDay, 'pageviews-over-time.csv')}
+        <div class="panel-body"><canvas id="pv-chart"></canvas></div>
     </div>
     <div class="panel">
-      <div class="panel-header">Top Pages</div>
-      <div id="top-pages"></div>
+        ${panelHeader('Top Pages', topPages, 'top-pages.csv')}
+        <div id="top-pages"></div>
     </div>
-  `;
+    `;
 
     // Cards
     const cards = [
@@ -422,14 +420,12 @@ async function renderPerformance(start, end) {
     <div class="page-title">Performance</div>
     <div class="vitals-grid" id="vitals"></div>
     <div class="panel">
-        <div class="panel-header">Web Vitals Comparison</div>
-        <div class="panel-body" style="position:relative;width:100%;min-height:200px;">
-            <canvas id="vitals-chart"></canvas>
-        </div>
+        ${panelHeader('Web Vitals Comparison', byPage, 'vitals.csv')}
+        <div class="panel-body"><canvas id="vitals-chart"></canvas></div>
     </div>
     <div class="panel">
-      <div class="panel-header">Per-Page Breakdown</div>
-      <div id="perf-table"></div>
+        ${panelHeader('Per-Page Breakdown', byPage, 'performance-by-page.csv')}
+        <div id="perf-table"></div>
     </div>
   `;
 
@@ -526,14 +522,12 @@ async function renderErrors(start, end) {
       </div>
     </div>
     <div class="panel">
-      <div class="panel-header">Error Trend</div>
-      <div class="panel-body" style="position:relative;width:100%;min-height:200px;">
-        <canvas id="err-chart"></canvas>
-      </div>
+        ${panelHeader('Error Trend', trend, 'error-trend.csv')}
+        <div class="panel-body"><canvas id="err-chart"></canvas></div>
     </div>
     <div class="panel">
-      <div class="panel-header">Errors by Message — click to expand</div>
-      <div id="err-table"></div>
+        ${panelHeader('Errors by Message', byMessage, 'errors-by-message.csv')}
+        <div id="err-table"></div>
     </div>
   `;
 
@@ -605,8 +599,8 @@ async function renderRawData() {
     content.innerHTML = `
     <div class="page-title">Raw Event Data</div>
     <div class="panel">
-      <div class="panel-header">Last 100 Events — unprocessed from database</div>
-      <div style="overflow-x:auto;">
+        ${panelHeader('Last 100 Events', events, 'raw-events.csv')}
+        <div style="overflow-x:auto;">
         <table class="data-table" id="raw-table">
           <thead>
             <tr>
@@ -831,6 +825,68 @@ function escapeHtml(str) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+}
+
+// CSV Download Helper
+function downloadCSV(filename, data) {
+    if (!data || data.length === 0) {
+        alert('No data to download.');
+        return;
+    }
+
+    // Build headers from first row keys
+    const headers = Object.keys(data[0]);
+    const rows = [
+        headers.join(','),
+        ...data.map(row =>
+            headers.map(h => {
+                const val = row[h] ?? '';
+                // Wrap in quotes if contains comma, quote, or newline
+                const str = String(val);
+                return str.includes(',') || str.includes('"') || str.includes('\n')
+                    ? `"${str.replace(/"/g, '""')}"`
+                    : str;
+            }).join(',')
+        )
+    ];
+
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// Panel header with optional CSV download button
+function panelHeader(title, data, filename) {
+    const id = 'dl-' + filename.replace(/[^a-z0-9]/gi, '-');
+    // Store data reference for button click
+    window._csvCache = window._csvCache || {};
+    window._csvCache[id] = { data, filename };
+
+    return `
+        <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;">
+            <span>${title}</span>
+            ${data && data.length > 0 ? `
+            <button class="csv-download-btn" data-id="${id}"
+                style="
+                    background:transparent;
+                    border:1px solid var(--border2);
+                    border-radius:4px;
+                    color:var(--text-muted);
+                    font-family:var(--font-mono);
+                    font-size:10px;
+                    padding:3px 8px;
+                    cursor:pointer;
+                    transition:border-color 0.15s,color 0.15s;
+                "
+                onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+                onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text-muted)'"
+            >↓ CSV</button>` : ''}
+        </div>
+    `;
 }
 
 async function deleteReport(id, title) {
@@ -1100,6 +1156,15 @@ function init() {
             document.getElementById('sidebar')?.classList.remove('open');
             document.getElementById('sidebar-overlay')?.classList.remove('visible');
         });
+    });
+
+    // CSV download — delegated listener on document
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('csv-download-btn')) {
+            const id    = e.target.dataset.id;
+            const cache = window._csvCache?.[id];
+            if (cache) downloadCSV(cache.filename, cache.data);
+        }
     });
 
     window.addEventListener('hashchange', route);
