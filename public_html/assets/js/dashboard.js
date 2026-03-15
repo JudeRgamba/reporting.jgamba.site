@@ -153,6 +153,17 @@ function route() {
 // Store chart instances so we can destroy them before redrawing
 const chartInstances = {};
 
+function destroyAllCharts() {
+    Object.keys(chartInstances).forEach(id => {
+        try {
+            chartInstances[id].destroy();
+        } catch (e) {
+            // ignore
+        }
+        delete chartInstances[id];
+    });
+}
+
 function drawLineChart(canvasId, data, xKey, yKey, color) {
     // Destroy existing chart on this canvas if it exists
     if (chartInstances[canvasId]) {
@@ -315,6 +326,7 @@ function showError(msg) {
 
 // View: Overview
 async function renderOverview(start, end) {
+    destroyAllCharts();
     showLoading();
 
     const [summary, pv, sessionOverTime, eventTypesRes] = await Promise.all([
@@ -559,6 +571,7 @@ async function renderOverview(start, end) {
 
 // View: Performance
 async function renderPerformance(start, end) {
+    destroyAllCharts();
     showLoading();
 
     const [perfData, distData] = await Promise.all([
@@ -772,21 +785,9 @@ async function renderPerformance(start, end) {
     }
 
     // Chart.js annotation plugin — load it if not already loaded
-    if (!window.ChartAnnotationLoaded) {
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js';
-        script.onload = () => {
-            window.ChartAnnotationLoaded = true;
-            drawVitalChart('lcp-chart', 'lcp', avgLcp, [2500, 4000], 'ms');
-            drawVitalChart('cls-chart', 'cls', avgCls, [0.1,  0.25], '');
-            drawVitalChart('inp-chart', 'inp', avgInp, [200,  500],  'ms');
-        };
-        document.head.appendChild(script);
-    } else {
-        drawVitalChart('lcp-chart', 'lcp', avgLcp, [2500, 4000], 'ms');
-        drawVitalChart('cls-chart', 'cls', avgCls, [0.1,  0.25], '');
-        drawVitalChart('inp-chart', 'inp', avgInp, [200,  500],  'ms');
-    }
+    drawVitalChart('lcp-chart', 'lcp', avgLcp, [2500, 4000], 'ms');
+    drawVitalChart('cls-chart', 'cls', avgCls, [0.1,  0.25], '');
+    drawVitalChart('inp-chart', 'inp', avgInp, [200,  500],  'ms');
 
     // ── TTFB vs Load Scatter ──────────────────────────────
     if (chartInstances['scatter-chart']) {
@@ -960,6 +961,7 @@ async function renderPerformance(start, end) {
 
 // View: Errors
 async function renderErrors(start, end) {
+    destroyAllCharts();
     showLoading();
     const data = await apiFetch('/api/errors?start=' + start + '&end=' + end);
     if (!data) return;
@@ -1045,6 +1047,7 @@ async function renderErrors(start, end) {
 
 // View: Raw Data
 async function renderRawData() {
+    destroyAllCharts();
     showLoading();
     const data = await apiFetch('/api/events');
     if (!data) return;
@@ -1140,6 +1143,7 @@ async function renderRawData() {
 
 // View: Reports
 async function renderReports() {
+    destroyAllCharts();
     showLoading();
     const data = await apiFetch('/api/reports');
     if (!data) return;
@@ -1618,6 +1622,7 @@ async function deleteReport(id, title) {
 
 // View: Admin
 async function renderAdmin() {
+    destroyAllCharts();
     showLoading();
     const res = await apiFetch('/users-admin.php');
     if (!res) return;

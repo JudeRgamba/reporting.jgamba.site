@@ -2,6 +2,7 @@
 'use strict';
 
 async function renderBehavior(start, end) {
+    destroyAllCharts();
     showLoading();
 
     const [bounceData, pagesData, scrollData, sourcesData, devicesData, sessionData] =
