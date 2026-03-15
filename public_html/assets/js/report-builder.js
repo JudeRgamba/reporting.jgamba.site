@@ -22,7 +22,15 @@ async function openReportBuilder(existingReport) {
         canSee('overview')     ? apiFetch(`/api/pageviews?start=${start}&end=${end}`)   : null,
         canSee('performance')  ? apiFetch(`/api/performance?start=${start}&end=${end}`) : null,
         canSee('errors')       ? apiFetch(`/api/errors?start=${start}&end=${end}`)      : null,
-        apiFetch('/users-admin.php').catch(() => null),
+        fetch('/api/users', {
+        credentials: 'include',
+        headers: {
+            'Content-Type':    'application/json',
+            'X-User-Role':     window.SESSION_ROLE,
+            'X-User-Sections': JSON.stringify(window.SESSION_SECTIONS || []),
+            'X-User-Id':       String(window.SESSION_USER_ID),
+        },
+        }).then(r => r.ok ? r.json() : null).catch(() => null),
     ]);
 
     const ov   = overviewData?.data  || {};
