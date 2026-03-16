@@ -114,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #0f172a;
+            background: #151617;
             color: #e2e8f0;
             min-height: 100vh;
             display: flex;
@@ -205,7 +205,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <body>
     <div class="login-card">
-        <h1>Hole in One Analytics</h1>
+        <h1>⛳Hole in One Analytics</h1>
         <p>Sign in to view your website's analytics</p>
 
         <form id="login-form">
