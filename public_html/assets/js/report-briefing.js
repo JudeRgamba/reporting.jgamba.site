@@ -245,7 +245,7 @@ function openReportBriefing(report) {
 
     // PDF export
     document.getElementById('briefing-pdf')
-        .addEventListener('click', () => exportBriefingPdf(snapshot.title || report.title));
+        .addEventListener('click', () => exportBriefingPdf(report.id, snapshot.title || report.title));
 }
 
 function drawBriefingChart(canvasId, chart) {
@@ -500,43 +500,27 @@ function drawBriefingChart(canvasId, chart) {
     }
 }
 
-function exportBriefingPdf(title) {
-    const style = document.createElement('style');
-    style.id = 'print-style';
-    style.textContent = `
-        @media print {
-            @page { margin: 15mm; }
+async function exportBriefingPdf(reportId, title) {
+    const btn = document.getElementById('briefing-pdf');
+    if (btn) {
+        btn.textContent = 'Generating...';
+        btn.disabled    = true;
+    }
 
-            .no-print    { display: none !important; }
-            #sidebar     { display: none !important; }
-            #topbar      { display: none !important; }
-            .header      { display: none !important; }
-            #main        { margin: 0 !important; padding: 0 !important; }
+    try {
+        const data = await apiRequest(`/api/reports/${reportId}/export`, 'POST', {});
 
-            body         { background: white !important; color: #111 !important; }
-            #briefing-view { max-width: 100% !important; color: #111 !important; }
+        if (!data?.success) throw new Error(data?.error || 'Export failed');
 
-            /* Keep grid layout in print */
-            .chart-row   { grid-template-columns: 1fr 1fr !important; }
-            .chart-row-3 { grid-template-columns: repeat(3, 1fr) !important; }
+        // Open PDF in new tab
+        window.open(data.url, '_blank');
 
-            /* Prevent charts from breaking across pages */
-            .panel, [style*="border-radius:8px"] {
-                break-inside: avoid;
-                page-break-inside: avoid;
-            }
-
-            canvas { max-width: 100% !important; }
-
-            /* Override dark theme colors for print */
-            [style*="background:var(--surface)"] { background: #f8f9fa !important; }
-            [style*="border:1px solid var(--border)"] { border-color: #e0e0e0 !important; }
-            [style*="color:var(--text)"] { color: #111 !important; }
-            [style*="color:var(--text-dim)"] { color: #666 !important; }
-            [style*="color:var(--text-muted)"] { color: #888 !important; }
+    } catch (err) {
+        alert('PDF export failed: ' + err.message);
+    } finally {
+        if (btn) {
+            btn.textContent = 'Export as PDF';
+            btn.disabled    = false;
         }
-    `;
-    document.head.appendChild(style);
-    window.print();
-    setTimeout(() => document.getElementById('print-style')?.remove(), 1000);
+    }
 }
