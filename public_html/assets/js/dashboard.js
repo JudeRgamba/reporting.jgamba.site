@@ -2399,6 +2399,9 @@ async function renderAdmin() {
                     .map(cb => cb.value)
                 : [];
 
+            // TEMP DEBUG
+            console.log('Saving user:', { id, display, role, sections });
+            
             msgEl.style.color = 'var(--text-dim)';
             msgEl.textContent = 'Saving...';
 
