@@ -49,7 +49,7 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($report['title']) ?></title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -298,41 +298,37 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
 
     <script>
         const chartsData = <?= json_encode(array_values($enabledCharts)) ?>;
+        const totalCharts = chartsData.length;
+        let chartsRendered = 0;
+
+        function chartDone() {
+            chartsRendered++;
+            if (chartsRendered >= totalCharts) {
+                window.status = 'ready';
+            }
+        }
+
+        if (totalCharts === 0) {
+            window.status = 'ready';
+        }
 
         const COLORS = {
             blue: '#2563eb',
             green: '#16a34a',
             red: '#dc2626',
             yellow: '#d97706',
+            purple: '#7c3aed',
             gray: '#6b7280',
         };
 
         chartsData.forEach((chart, i) => {
             const canvas = document.getElementById('chart-' + i);
-            if (!canvas || !chart.data?.length) return;
+            if (!canvas || !chart.data?.length) {
+                chartDone();
+                return;
+            }
 
             const type = chart.type || 'bar';
-
-            const defaultScales = {
-                xAxes: [{
-                    ticks: {
-                        fontColor: '#888',
-                        fontSize: 10
-                    },
-                    gridLines: {
-                        color: '#eee'
-                    }
-                }],
-                yAxes: [{
-                    ticks: {
-                        fontColor: '#888',
-                        beginAtZero: true
-                    },
-                    gridLines: {
-                        color: '#eee'
-                    }
-                }]
-            };
 
             if (type === 'line') {
                 const xKey = 'day';
@@ -352,17 +348,43 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
                             backgroundColor: color + '22',
                             borderWidth: 2,
                             fill: true,
+                            tension: 0.3,
                             pointRadius: 3,
                         }],
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        animation: false,
-                        legend: {
-                            display: false
+                        animation: {
+                            onComplete: chartDone
                         },
-                        scales: defaultScales,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    color: '#888',
+                                    font: {
+                                        size: 10
+                                    }
+                                },
+                                grid: {
+                                    color: '#eee'
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: '#888'
+                                },
+                                grid: {
+                                    color: '#eee'
+                                }
+                            },
+                        },
                     },
                 });
 
@@ -378,6 +400,7 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
                                 backgroundColor: COLORS.blue + '22',
                                 borderWidth: 2,
                                 fill: true,
+                                tension: 0.3,
                                 pointRadius: 3,
                             },
                             {
@@ -387,6 +410,7 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
                                 backgroundColor: COLORS.green + '22',
                                 borderWidth: 2,
                                 fill: true,
+                                tension: 0.3,
                                 pointRadius: 3,
                             },
                         ],
@@ -394,11 +418,41 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        animation: false,
-                        legend: {
-                            display: true
+                        animation: {
+                            onComplete: chartDone
                         },
-                        scales: defaultScales,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                labels: {
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    color: '#888',
+                                    font: {
+                                        size: 10
+                                    }
+                                },
+                                grid: {
+                                    color: '#eee'
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: '#888'
+                                },
+                                grid: {
+                                    color: '#eee'
+                                }
+                            },
+                        },
                     },
                 });
 
@@ -410,14 +464,15 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
                     chart.key === 'errors_by_element' ? 'element_type' :
                     chart.key === 'traffic_sources' ? 'source' :
                     chart.key === 'connection_types' ? 'connection_type' : 'label';
-                const valueKey = ['errors_by_page', 'errors_by_type', 'errors_by_element'].includes(chart.key) ? 'count' :
+                const valueKey = ['errors_by_page', 'errors_by_type', 'errors_by_element'].includes(chart.key) ?
+                    'count' :
                     chart.key === 'traffic_sources' ? 'pageviews' :
                     chart.key === 'connection_types' ? 'count' :
                     chart.key === 'event_types' ? 'count' : 'views';
                 const color = chart.key?.startsWith('error') ? COLORS.red : COLORS.blue;
 
                 new Chart(canvas, {
-                    type: 'horizontalBar',
+                    type: 'bar',
                     data: {
                         labels: chart.data.slice(0, 10).map(d =>
                             String(d[labelKey] || '').replace('https://test.jgamba.site', '') || '/'
@@ -427,35 +482,45 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
                             backgroundColor: color + '44',
                             borderColor: color,
                             borderWidth: 1,
+                            borderRadius: 4,
+                            maxBarThickness: 28,
                         }],
                     },
                     options: {
+                        indexAxis: 'y',
                         responsive: true,
                         maintainAspectRatio: false,
-                        animation: false,
-                        legend: {
-                            display: false
+                        animation: {
+                            onComplete: chartDone
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
                         },
                         scales: {
-                            xAxes: [{
+                            x: {
+                                beginAtZero: true,
                                 ticks: {
-                                    fontColor: '#888',
-                                    beginAtZero: true,
-                                    stepSize: 1
+                                    color: '#888',
+                                    stepSize: 1,
+                                    callback: v => Number.isInteger(v) ? v : null
                                 },
-                                gridLines: {
+                                grid: {
                                     color: '#eee'
                                 }
-                            }],
-                            yAxes: [{
+                            },
+                            y: {
                                 ticks: {
-                                    fontColor: '#888',
-                                    fontSize: 10
+                                    color: '#888',
+                                    font: {
+                                        size: 10
+                                    }
                                 },
-                                gridLines: {
+                                grid: {
                                     display: false
                                 }
-                            }],
+                            },
                         },
                     },
                 });
@@ -495,34 +560,41 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
                             borderColor: chart.key === 'speed_distribution' ?
                                 speedColors : COLORS.blue,
                             borderWidth: 1,
+                            borderRadius: 4,
+                            maxBarThickness: 48,
                         }],
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        animation: false,
-                        legend: {
-                            display: false
+                        animation: {
+                            onComplete: chartDone
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
                         },
                         scales: {
-                            xAxes: [{
+                            x: {
                                 ticks: {
-                                    fontColor: '#888'
+                                    color: '#888'
                                 },
-                                gridLines: {
+                                grid: {
                                     color: '#eee'
                                 }
-                            }],
-                            yAxes: [{
+                            },
+                            y: {
+                                beginAtZero: true,
                                 ticks: {
-                                    fontColor: '#888',
-                                    beginAtZero: true,
-                                    stepSize: 1
+                                    color: '#888',
+                                    stepSize: 1,
+                                    callback: v => Number.isInteger(v) ? v : null
                                 },
-                                gridLines: {
+                                grid: {
                                     color: '#eee'
                                 }
-                            }],
+                            },
                         },
                     },
                 });
@@ -542,47 +614,59 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        animation: false,
-                        legend: {
-                            display: false
+                        animation: {
+                            onComplete: chartDone
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: ctx => [ctx.raw.label, `TTFB: ${ctx.raw.x}ms`, `Load: ${ctx.raw.y}ms`]
+                                }
+                            }
                         },
                         scales: {
-                            xAxes: [{
-                                scaleLabel: {
+                            x: {
+                                title: {
                                     display: true,
-                                    labelString: 'TTFB (ms)',
-                                    fontColor: '#888'
+                                    text: 'TTFB (ms)',
+                                    color: '#888'
                                 },
                                 ticks: {
-                                    fontColor: '#888',
+                                    color: '#888',
                                     callback: v => v + 'ms'
                                 },
-                                gridLines: {
+                                grid: {
                                     color: '#eee'
                                 }
-                            }],
-                            yAxes: [{
-                                scaleLabel: {
+                            },
+                            y: {
+                                title: {
                                     display: true,
-                                    labelString: 'Load (ms)',
-                                    fontColor: '#888'
+                                    text: 'Load (ms)',
+                                    color: '#888'
                                 },
+                                beginAtZero: true,
                                 ticks: {
-                                    fontColor: '#888',
-                                    beginAtZero: true,
+                                    color: '#888',
                                     callback: v => v + 'ms'
                                 },
-                                gridLines: {
+                                grid: {
                                     color: '#eee'
                                 }
-                            }],
+                            },
                         },
                     },
                 });
 
             } else if (type === 'vital') {
                 const d = chart.data[0];
-                if (!d) return;
+                if (!d) {
+                    chartDone();
+                    return;
+                }
                 const color = d.value < d.thresholds[0] ? '#16a34a' :
                     d.value < d.thresholds[1] ? '#d97706' : '#dc2626';
                 new Chart(canvas, {
@@ -594,38 +678,47 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
                             backgroundColor: color + '99',
                             borderColor: color,
                             borderWidth: 2,
+                            borderRadius: 4,
+                            barThickness: 60,
                         }],
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        animation: false,
-                        legend: {
-                            display: false
+                        animation: {
+                            onComplete: chartDone
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
                         },
                         scales: {
-                            xAxes: [{
+                            x: {
                                 ticks: {
-                                    fontColor: '#888'
+                                    color: '#888'
                                 },
-                                gridLines: {
+                                grid: {
                                     display: false
                                 }
-                            }],
-                            yAxes: [{
+                            },
+                            y: {
+                                beginAtZero: true,
+                                max: Math.max(d.value * 1.4, d.thresholds[1] * 1.3),
                                 ticks: {
-                                    fontColor: '#888',
-                                    beginAtZero: true,
-                                    max: Math.max(d.value * 1.4, d.thresholds[1] * 1.3),
-                                    callback: v => v + d.unit,
+                                    color: '#888',
+                                    callback: v => v + d.unit
                                 },
-                                gridLines: {
+                                grid: {
                                     color: '#eee'
                                 },
-                            }],
+                            },
                         },
                     },
                 });
+
+            } else {
+                chartDone();
             }
         });
     </script>
