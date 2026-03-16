@@ -1,6 +1,33 @@
 <?php
 session_start();
 
+// Rate limit login attempts — max 10 per 15 minutes
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $now      = time();
+    $window   = 15 * 60; // 15 minutes
+    $maxTries = 10;
+
+    if (!isset($_SESSION['login_attempts'])) {
+        $_SESSION['login_attempts'] = [];
+    }
+
+    // Remove attempts older than the window
+    $_SESSION['login_attempts'] = array_filter(
+        $_SESSION['login_attempts'],
+        fn($t) => ($now - $t) < $window
+    );
+
+    if (count($_SESSION['login_attempts']) >= $maxTries) {
+        header('Content-Type: application/json');
+        http_response_code(429);
+        echo json_encode([
+            'success' => false,
+            'error'   => 'Too many login attempts. Please wait 15 minutes.'
+        ]);
+        exit;
+    }
+}
+
 if (isset($_SESSION['user_id'])) {
     header('Location: /dashboard.php');
     exit;
@@ -26,10 +53,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user = $stmt->fetch();
 
     if (!$user || !password_verify($password, $user['password_hash'])) {
+        // Record failed attempt
+        $_SESSION['login_attempts'][] = time();
+
         http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Invalid credentials']);
         exit;
     }
+
+    // Clear attempts on successful login
+    unset($_SESSION['login_attempts']);
 
     // Success
     session_regenerate_id(true); // prevent session fixation
