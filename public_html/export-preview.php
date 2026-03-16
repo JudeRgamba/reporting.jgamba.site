@@ -199,6 +199,24 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
             border-top: 1px solid #e0e0e0;
             margin-top: 20px;
         }
+
+        canvas {
+            display: block;
+            max-width: 100% !important;
+        }
+
+        .chart-panel {
+            overflow: hidden;
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 
@@ -265,22 +283,33 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
                 $wideTypes    = ['line_dual', 'scatter'];
                 $chartIndex   = 0;
                 foreach ($enabledCharts as $key => $chart):
-                    $isWide  = in_array($chart['type'] ?? '', $wideTypes) ||
-                        ($chart['type'] === 'bar_horizontal' && count($chart['data']) > 6);
-                    $height  = match ($chart['type'] ?? 'bar') {
-                        'vital'          => 160,
-                        'scatter'        => 240,
-                        'line', 'line_dual' => 200,
-                        'bar_horizontal' => max(120, min(count($chart['data']), 10) * 30 + 40),
-                        default          => 180,
+                    $isWide = in_array($chart['type'] ?? '', ['line_dual', 'scatter']) ||
+                        ($chart['type'] === 'bar_horizontal' && count($chart['data']) > 5) ||
+                        ($chart['key'] ?? '') === 'pageviews_sessions' ||
+                        ($chart['key'] ?? '') === 'error_rate' ||
+                        ($chart['key'] ?? '') === 'bounce_rate' ||
+                        ($chart['key'] ?? '') === 'error_trend';
+                    $height = match ($chart['type'] ?? 'bar') {
+                        'vital'             => 160,
+                        'scatter'           => 280,
+                        'line', 'line_dual' => 220,
+                        'bar_horizontal'    => max(140, min(count($chart['data']), 10) * 38 + 60),
+                        'bar'               => match ($chart['key'] ?? '') {
+                            'speed_distribution' => 200,
+                            'session_durations'  => 220,
+                            'pages_per_session'  => max(160, count($chart['data']) * 45 + 40),
+                            'device_breakdown'   => max(160, count($chart['data']) * 60 + 40),
+                            default              => 200,
+                        },
+                        default => 200,
                     };
                 ?>
                     <div class="chart-panel <?= $isWide ? 'wide' : '' ?>">
                         <div class="chart-title">
                             <?= htmlspecialchars($chart['label'] ?? $key) ?>
                         </div>
-                        <div class="chart-body" style="height:<?= $height ?>px;position:relative;">
-                            <canvas id="chart-<?= $chartIndex ?>"></canvas>
+                        <div class="chart-body" style="height:<?= $height ?>px;position:relative;overflow:hidden;">
+                            <canvas id="chart-<?= $chartIndex ?>" style="width:100% !important;height:100% !important;"></canvas>
                         </div>
                     </div>
                 <?php $chartIndex++;
