@@ -538,6 +538,7 @@ async function openReportBuilder(existingReport) {
             const cb = modal.querySelector(`input[data-chart="${c.key}"]`);
             chartsSnapshot[c.key] = {
                 enabled: cb?.checked || false,
+                key:     c.key,
                 label:   c.label,
                 type:    c.type,
                 section: c.section,
