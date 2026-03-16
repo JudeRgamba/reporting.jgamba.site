@@ -1,4 +1,4 @@
-# Hole in One Analytics — Full-Stack Web Analytics Platform
+# Hole in One Analytics - Full-Stack Web Analytics Platform
 
 A beginner web analytics pipeline built from scratch for CSE 135. Collects behavioral and performance data from a test site, stores it in MySQL, exposes it through a REST API, and visualizes it in a role-based SPA dashboard with PDF report generation.
 
