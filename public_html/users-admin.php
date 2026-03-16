@@ -9,6 +9,12 @@ if ($userId) {
     $nodeUrl .= '/' . intval($userId);
 }
 
+// Handle password update action
+$action = $_GET['action'] ?? null;
+if ($action === 'password') {
+    $nodeUrl .= '/password';
+}
+
 $self = $_GET['self'] ?? null;
 if ($self) {
     $nodeUrl .= '?self=' . intval($self);
@@ -19,9 +25,9 @@ $opts = [
         'method'  => $method,
         'header'  => implode("\r\n", [
             'Content-Type: application/json',
-            'X-User-Role: '     . ($_SESSION['role'] ?? 'viewer'),
+            'X-User-Role: '     . ($_SESSION['role']     ?? 'viewer'),
             'X-User-Sections: ' . json_encode($_SESSION['sections'] ?? []),
-            'X-User-Id: '       . ($_SESSION['user_id'] ?? ''),
+            'X-User-Id: '       . ($_SESSION['user_id']  ?? ''),
         ]),
         'content' => file_get_contents('php://input'),
         'ignore_errors' => true

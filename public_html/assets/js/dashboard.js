@@ -2141,77 +2141,201 @@ async function renderAdmin() {
 
     const content = document.getElementById('content');
     content.innerHTML = `
-    <div class="page-title">Admin — User Management</div>
-    <div class="panel">
-      <div class="panel-header">All Users</div>
-      <div id="users-table"></div>
-    </div>
-    <div class="panel">
-      <div class="panel-header">Add New User</div>
-      <div class="panel-body">
-        <div class="form-grid" id="add-user-form">
-          <div class="form-group">
-            <label>Username</label>
-            <input type="text" id="new-username" placeholder="username">
-          </div>
-          <div class="form-group">
-            <label>Email</label>
-            <input type="email" id="new-email" placeholder="user@example.com">
-          </div>
-          <div class="form-group">
-            <label>Display Name</label>
-            <input type="text" id="new-display" placeholder="Display Name">
-          </div>
-          <div class="form-group">
-            <label>Password</label>
-            <input type="password" id="new-password" placeholder="password">
-          </div>
-          <div class="form-group">
-            <label>Role</label>
-            <select id="new-role">
-              <option value="viewer">Viewer</option>
-              <option value="analyst">Analyst</option>
-              <option value="super_admin">Super Admin</option>
-            </select>
-          </div>
-          <div class="form-group" id="sections-group" style="display:none;">
-              <label>Assigned Sections</label>
-              <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
-                  <label style="text-transform:none;font-size:13px;">
-                      <input type="checkbox" value="overview"> Overview
-                  </label>
-                  <label style="text-transform:none;font-size:13px;">
-                      <input type="checkbox" value="performance"> Performance
-                  </label>
-                  <label style="text-transform:none;font-size:13px;">
-                      <input type="checkbox" value="errors"> Errors
-                  </label>
-                  <label style="text-transform:none;font-size:13px;">
-                      <input type="checkbox" value="rawdata"> Raw Data
-                  </label>
-              </div>
-          </div>
+        <div class="page-title">Admin — User Management</div>
+        <div class="panel" style="margin-bottom:20px;">
+            <div class="panel-header">All Users</div>
+            <div id="users-table"></div>
         </div>
-        <button class="btn btn-primary btn-full" id="add-user-btn">Add User</button>
-        <div id="add-user-msg" style="margin-top:10px;font-family:var(--font-mono);font-size:12px;"></div>
-      </div>
-    </div>
-  `;
+        <div class="panel">
+            <div class="panel-header">Add New User</div>
+            <div class="panel-body">
+                <div class="form-grid" id="add-user-form">
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input type="text" id="new-username" placeholder="username">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="new-email" placeholder="user@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Display Name</label>
+                        <input type="text" id="new-display" placeholder="Display Name">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="new-password" placeholder="password">
+                    </div>
+                    <div class="form-group">
+                        <label>Role</label>
+                        <select id="new-role">
+                            <option value="viewer">Viewer</option>
+                            <option value="analyst">Analyst</option>
+                            <option value="super_admin">Super Admin</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="sections-group" style="display:none;">
+                        <label>Assigned Sections</label>
+                        <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+                            <label style="text-transform:none;font-size:13px;">
+                                <input type="checkbox" value="overview"> Overview
+                            </label>
+                            <label style="text-transform:none;font-size:13px;">
+                                <input type="checkbox" value="performance"> Performance
+                            </label>
+                            <label style="text-transform:none;font-size:13px;">
+                                <input type="checkbox" value="errors"> Errors
+                            </label>
+                            <label style="text-transform:none;font-size:13px;">
+                                <input type="checkbox" value="rawdata"> Raw Data
+                            </label>
+                            <label style="text-transform:none;font-size:13px;">
+                                <input type="checkbox" value="behavior"> Behavior
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-full" id="add-user-btn">Add User</button>
+                <div id="add-user-msg"
+                    style="margin-top:10px;font-family:var(--font-mono);font-size:12px;">
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit User Modal (hidden) -->
+        <div id="edit-user-modal" style="
+            display:none;position:fixed;inset:0;
+            background:rgba(0,0,0,0.7);
+            display:none;align-items:center;justify-content:center;
+            z-index:1000;padding:20px;
+        ">
+            <div style="
+                background:var(--surface);border:1px solid var(--border);
+                border-radius:12px;width:100%;max-width:480px;
+                max-height:90vh;overflow-y:auto;padding:32px;
+            ">
+                <div style="
+                    display:flex;justify-content:space-between;
+                    align-items:center;margin-bottom:24px;
+                ">
+                    <div style="font-size:18px;font-weight:700;">Edit User</div>
+                    <button id="edit-modal-close" style="
+                        background:none;border:none;color:var(--text-dim);
+                        font-size:20px;cursor:pointer;padding:4px 8px;
+                    ">✕</button>
+                </div>
+
+                <input type="hidden" id="edit-user-id">
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label>Username</label>
+                    <input type="text" id="edit-username" disabled style="
+                        opacity:0.5;cursor:not-allowed;
+                        background:var(--bg);border:1px solid var(--border2);
+                        border-radius:var(--radius);color:var(--text);
+                        font-family:var(--font-mono);font-size:13px;
+                        padding:8px 12px;width:100%;
+                    ">
+                </div>
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label>Display Name</label>
+                    <input type="text" id="edit-display" style="
+                        width:100%;background:var(--bg);
+                        border:1px solid var(--border2);
+                        border-radius:var(--radius);color:var(--text);
+                        font-family:var(--font-mono);font-size:13px;
+                        padding:8px 12px;outline:none;
+                    ">
+                </div>
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label>Role</label>
+                    <select id="edit-role" style="
+                        width:100%;background:var(--bg);
+                        border:1px solid var(--border2);
+                        border-radius:var(--radius);color:var(--text);
+                        font-family:var(--font-mono);font-size:13px;
+                        padding:8px 12px;outline:none;cursor:pointer;
+                    ">
+                        <option value="viewer">Viewer</option>
+                        <option value="analyst">Analyst</option>
+                        <option value="super_admin">Super Admin</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="edit-sections-group"
+                    style="margin-bottom:20px;display:none;">
+                    <label>Assigned Sections</label>
+                    <div style="
+                        display:grid;grid-template-columns:1fr 1fr;
+                        gap:8px;margin-top:8px;
+                    ">
+                        ${['overview','performance','errors','rawdata','behavior'].map(s => `
+                            <label style="
+                                display:flex;align-items:center;gap:8px;
+                                padding:8px 12px;border:1px solid var(--border);
+                                border-radius:6px;cursor:pointer;font-size:13px;
+                                text-transform:none;
+                            ">
+                                <input type="checkbox"
+                                    class="edit-section-cb"
+                                    value="${s}">
+                                ${s.charAt(0).toUpperCase() + s.slice(1)}
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:20px;">
+                    <label>New Password
+                        <span style="
+                            font-weight:400;text-transform:none;
+                            font-size:11px;color:var(--text-dim);
+                        ">— leave blank to keep current</span>
+                    </label>
+                    <input type="password" id="edit-password"
+                        placeholder="Enter new password to change"
+                        style="
+                            width:100%;background:var(--bg);
+                            border:1px solid var(--border2);
+                            border-radius:var(--radius);color:var(--text);
+                            font-family:var(--font-mono);font-size:13px;
+                            padding:8px 12px;outline:none;
+                        ">
+                </div>
+
+                <div style="display:flex;justify-content:flex-end;gap:12px;">
+                    <button id="edit-modal-cancel" class="btn-secondary">Cancel</button>
+                    <button id="edit-modal-save" class="btn-primary">Save Changes</button>
+                </div>
+                <div id="edit-modal-msg"
+                    style="margin-top:12px;font-size:13px;text-align:center;">
+                </div>
+            </div>
+        </div>
+    `;
 
     renderUsersTable(res.data || []);
 
+    // ── Add user form ─────────────────────────────────────
+    document.getElementById('new-role').addEventListener('change', e => {
+        document.getElementById('sections-group').style.display =
+            e.target.value === 'analyst' ? 'block' : 'none';
+    });
+
     document.getElementById('add-user-btn').addEventListener('click', async () => {
         const username = document.getElementById('new-username').value.trim();
-        const email = document.getElementById('new-email').value.trim();
-        const display = document.getElementById('new-display').value.trim();
+        const email    = document.getElementById('new-email').value.trim();
+        const display  = document.getElementById('new-display').value.trim();
         const password = document.getElementById('new-password').value;
-        const role = document.getElementById('new-role').value;
-        const msgEl = document.getElementById('add-user-msg');
+        const role     = document.getElementById('new-role').value;
+        const msgEl    = document.getElementById('add-user-msg');
 
         const sections = role === 'analyst'
-          ? [...document.querySelectorAll('#sections-group input:checked')]
-              .map(cb => cb.value)
-          : [];
+            ? [...document.querySelectorAll('#sections-group input:checked')]
+                .map(cb => cb.value)
+            : [];
 
         if (!username || !email || !password) {
             msgEl.style.color = 'var(--danger)';
@@ -2224,17 +2348,20 @@ async function renderAdmin() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ username, email, display_name: display, password, role, sections }),
+                body: JSON.stringify({
+                    username, email,
+                    display_name: display,
+                    password, role, sections
+                }),
             });
             const data = await res.json();
             if (res.ok && data.success) {
                 msgEl.style.color = 'var(--accent2)';
                 msgEl.textContent = 'User created successfully.';
                 document.getElementById('new-username').value = '';
-                document.getElementById('new-email').value = '';
-                document.getElementById('new-display').value = '';
+                document.getElementById('new-email').value    = '';
+                document.getElementById('new-display').value  = '';
                 document.getElementById('new-password').value = '';
-                // Refresh table
                 const updated = await apiFetch('/users-admin.php');
                 if (updated) renderUsersTable(updated.data || []);
             } else {
@@ -2246,10 +2373,104 @@ async function renderAdmin() {
             msgEl.textContent = 'Network error.';
         }
     });
-    document.getElementById('new-role').addEventListener('change', (e) => {
-      document.getElementById('sections-group').style.display =
-          e.target.value === 'analyst' ? 'block' : 'none';
+
+    // ── Edit modal logic ──────────────────────────────────
+    document.getElementById('edit-modal-close')
+        ?.addEventListener('click', closeEditModal);
+    document.getElementById('edit-modal-cancel')
+        ?.addEventListener('click', closeEditModal);
+
+    document.getElementById('edit-role')
+        ?.addEventListener('change', e => {
+            document.getElementById('edit-sections-group').style.display =
+                e.target.value === 'analyst' ? 'grid' : 'none';
+        });
+
+    document.getElementById('edit-modal-save')
+        ?.addEventListener('click', async () => {
+            const id          = document.getElementById('edit-user-id').value;
+            const display     = document.getElementById('edit-display').value.trim();
+            const role        = document.getElementById('edit-role').value;
+            const password    = document.getElementById('edit-password').value;
+            const msgEl       = document.getElementById('edit-modal-msg');
+
+            const sections = role === 'analyst'
+                ? [...document.querySelectorAll('.edit-section-cb:checked')]
+                    .map(cb => cb.value)
+                : [];
+
+            msgEl.style.color = 'var(--text-dim)';
+            msgEl.textContent = 'Saving...';
+
+            try {
+                // Update role + display_name + sections
+                const body = { display_name: display, role, sections };
+
+                const res = await fetch(
+                    `/users-admin.php?id=${id}`,
+                    {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify(body),
+                    }
+                );
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.error || 'Update failed');
+
+                // Update password if provided
+                if (password) {
+                    const pwRes = await fetch(
+                        `/users-admin.php?id=${id}&action=password`,
+                        {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ password }),
+                        }
+                    );
+                    const pwData = await pwRes.json();
+                    if (!pwData.success) throw new Error(pwData.error || 'Password update failed');
+                }
+
+                closeEditModal();
+                const updated = await apiFetch('/users-admin.php');
+                if (updated) renderUsersTable(updated.data || []);
+
+            } catch (err) {
+                msgEl.style.color = 'var(--danger)';
+                msgEl.textContent = err.message;
+            }
+        });
+}
+
+function closeEditModal() {
+    const modal = document.getElementById('edit-user-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+function openEditModal(user) {
+    const modal = document.getElementById('edit-user-modal');
+    if (!modal) return;
+
+    // Populate fields
+    document.getElementById('edit-user-id').value  = user.id;
+    document.getElementById('edit-username').value = user.username;
+    document.getElementById('edit-display').value  = user.display_name || '';
+    document.getElementById('edit-role').value     = user.role;
+    document.getElementById('edit-password').value = '';
+    document.getElementById('edit-modal-msg').textContent = '';
+
+    // Show/hide sections
+    const sectionsGroup = document.getElementById('edit-sections-group');
+    sectionsGroup.style.display = user.role === 'analyst' ? 'grid' : 'none';
+
+    // Check assigned sections
+    document.querySelectorAll('.edit-section-cb').forEach(cb => {
+        cb.checked = (user.sections || []).includes(cb.value);
     });
+
+    modal.style.display = 'flex';
 }
 
 function renderUsersTable(users) {
@@ -2266,41 +2487,77 @@ function renderUsersTable(users) {
               };
               const c = colors[val] || '#7d8590';
               const badge = document.createElement('span');
-              badge.className   = 'badge';
-              badge.textContent = val || '—';
+              badge.className        = 'badge';
+              badge.textContent      = val || '—';
               badge.style.background = c + '22';
               badge.style.color      = c;
               td.appendChild(badge);
           }
         },
+        { key: 'sections', label: 'Sections',
+          render: (td, val) => {
+              const sects = val || [];
+              if (sects.length === 0) {
+                  td.textContent = '—';
+                  td.style.color = 'var(--text-dim)';
+                  return;
+              }
+              td.style.display  = 'flex';
+              td.style.flexWrap = 'wrap';
+              td.style.gap      = '4px';
+              sects.forEach(s => {
+                  const chip = document.createElement('span');
+                  chip.className        = 'badge';
+                  chip.textContent      = s;
+                  chip.style.background = 'var(--surface2)';
+                  chip.style.color      = 'var(--text-muted)';
+                  td.appendChild(chip);
+              });
+          }
+        },
         { key: 'last_login', label: 'Last Login', mono: true,
           render: (td, val) => {
-              td.textContent = val ? String(val).slice(0, 10) : 'Never';
+              td.textContent      = val ? String(val).slice(0, 10) : 'Never';
               td.style.fontFamily = 'var(--font-mono)';
               td.style.fontSize   = '11px';
           }
         },
         { key: 'actions', label: 'Actions',
           render: (td, val, row) => {
-              const delBtn = document.createElement('button');
-              delBtn.className   = 'btn btn-danger';
-              delBtn.textContent = 'Delete';
-              delBtn.style.fontSize = '12px';
-              delBtn.addEventListener('click', async () => {
-                  if (!confirm('Delete user ' + row.username + '?')) return;
-                  const res = await fetch(
-                      '/users-admin.php?id=' + row.id + '&self=' + window.SESSION_USER_ID,
-                      { method: 'DELETE', credentials: 'include' }
-                  );
-                  const data = await res.json();
-                  if (data.success) {
-                      const updated = await apiFetch('/users-admin.php');
-                      if (updated) renderUsersTable(updated.data || []);
-                  } else {
-                      alert(data.error || 'Could not delete user.');
-                  }
-              });
-              td.appendChild(delBtn);
+              td.style.display = 'flex';
+              td.style.gap     = '6px';
+
+              // Edit button
+              const editBtn = document.createElement('button');
+              editBtn.className   = 'btn-secondary';
+              editBtn.textContent = 'Edit';
+              editBtn.style.fontSize = '12px';
+              editBtn.addEventListener('click', () => openEditModal(row));
+              td.appendChild(editBtn);
+
+              // Delete button — can't delete yourself
+              if (String(row.id) !== String(window.SESSION_USER_ID)) {
+                  const delBtn = document.createElement('button');
+                  delBtn.className   = 'btn-danger';
+                  delBtn.textContent = 'Delete';
+                  delBtn.style.fontSize = '12px';
+                  delBtn.addEventListener('click', async () => {
+                      if (!confirm('Delete user ' + row.username + '?')) return;
+                      const res = await fetch(
+                          '/users-admin.php?id=' + row.id +
+                          '&self=' + window.SESSION_USER_ID,
+                          { method: 'DELETE', credentials: 'include' }
+                      );
+                      const data = await res.json();
+                      if (data.success) {
+                          const updated = await apiFetch('/users-admin.php');
+                          if (updated) renderUsersTable(updated.data || []);
+                      } else {
+                          alert(data.error || 'Could not delete user.');
+                      }
+                  });
+                  td.appendChild(delBtn);
+              }
           }
         },
     ], users.map(u => ({ ...u, actions: null })));
