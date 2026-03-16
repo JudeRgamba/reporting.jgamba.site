@@ -297,8 +297,20 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
     </div>
 
     <script>
-        // Chart data passed from PHP
         const chartsData = <?= json_encode(array_values($enabledCharts)) ?>;
+        const totalCharts = chartsData.length;
+        let chartsRendered = 0;
+
+        function chartDone() {
+            chartsRendered++;
+            if (chartsRendered >= totalCharts) {
+                window.status = 'ready';
+            }
+        }
+
+        if (totalCharts === 0) {
+            window.status = 'ready';
+        }
 
         const COLORS = {
             blue: '#2563eb',
@@ -311,14 +323,15 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
 
         chartsData.forEach((chart, i) => {
             const canvas = document.getElementById('chart-' + i);
-            if (!canvas || !chart.data?.length) return;
+            if (!canvas || !chart.data?.length) {
+                chartDone();
+                return;
+            }
 
             const type = chart.type || 'bar';
 
             if (type === 'line') {
-                const xKey = chart.key === 'error_trend' ? 'day' :
-                    chart.key === 'error_rate' ? 'day' :
-                    chart.key === 'bounce_rate' ? 'day' : 'day';
+                const xKey = 'day';
                 const yKey = chart.key === 'error_trend' ? 'error_count' :
                     chart.key === 'error_rate' ? 'error_rate' :
                     chart.key === 'bounce_rate' ? 'bounce_rate' : 'views';
@@ -342,6 +355,9 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        animation: {
+                            onComplete: chartDone
+                        },
                         plugins: {
                             legend: {
                                 display: false
@@ -402,6 +418,9 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        animation: {
+                            onComplete: chartDone
+                        },
                         plugins: {
                             legend: {
                                 display: true,
@@ -470,6 +489,9 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
                         indexAxis: 'y',
                         responsive: true,
                         maintainAspectRatio: false,
+                        animation: {
+                            onComplete: chartDone
+                        },
                         plugins: {
                             legend: {
                                 display: false
@@ -544,6 +566,9 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        animation: {
+                            onComplete: chartDone
+                        },
                         plugins: {
                             legend: {
                                 display: false
@@ -588,6 +613,9 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        animation: {
+                            onComplete: chartDone
+                        },
                         plugins: {
                             legend: {
                                 display: false
@@ -634,7 +662,10 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
 
             } else if (type === 'vital') {
                 const d = chart.data[0];
-                if (!d) return;
+                if (!d) {
+                    chartDone();
+                    return;
+                }
                 const color = d.value < d.thresholds[0] ? '#16a34a' :
                     d.value < d.thresholds[1] ? '#d97706' : '#dc2626';
                 new Chart(canvas, {
@@ -653,6 +684,9 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        animation: {
+                            onComplete: chartDone
+                        },
                         plugins: {
                             legend: {
                                 display: false
@@ -681,6 +715,10 @@ $enabledCharts  = array_filter($charts,  fn($c) => ($c['enabled'] ?? false) && !
                         },
                     },
                 });
+
+            } else {
+                // Unknown chart type — still count it
+                chartDone();
             }
         });
     </script>
